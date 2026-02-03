@@ -1,7 +1,38 @@
 import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { requestFullscreen, exitFullscreen, isFullscreen } from "../utils/fullscreen";
+
 
 export default function Welcome() {
   const navigate = useNavigate();
+ const [fs, setFs] = useState(isFullscreen());
+useEffect(() => {
+  const onChange = () => setFs(isFullscreen());
+  document.addEventListener("fullscreenchange", onChange);
+  document.addEventListener("webkitfullscreenchange", onChange);
+  return () => {
+    document.removeEventListener("fullscreenchange", onChange);
+    document.removeEventListener("webkitfullscreenchange", onChange);
+  };
+}, []);
+
+<button
+  onClick={() => (fs ? exitFullscreen() : requestFullscreen())}
+  style={{
+    position: "fixed",
+    top: 16,
+    right: 16,
+    padding: "10px 14px",
+    borderRadius: 12,
+    border: "1px solid #2b2b2b",
+    background: "#101010",
+    color: "white",
+    cursor: "pointer",
+    opacity: 0.9,
+  }}
+>
+  {fs ? "Exit Fullscreen" : "Go Fullscreen"}
+</button>
 
   return (
     <div style={styles.page}>

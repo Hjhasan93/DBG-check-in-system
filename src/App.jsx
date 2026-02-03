@@ -11,6 +11,8 @@ import TouringWith from "./screens/TouringWith";
 import WatchlistResult from "./screens/WatchlistResult";
 import AdminVisits from "./screens/AdminVisits";
 import AdminVisitDetail from "./screens/AdminVisitDetail";
+import IdleReset from "./components/IdleReset";
+
 
 
 
@@ -37,6 +39,10 @@ export default function App() {
 
 
       </Routes>
-    </BrowserRouter>
+      <IdleReset minutes={2} />
+      </BrowserRouter>
+
+   
+
   );
 }
