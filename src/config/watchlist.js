@@ -9,7 +9,7 @@ export const WATCHLIST = [
   {
     firstName: "Jane",
     lastName: "Smith",
-    phone: "",
+    phone: "2485555678",
     email: "jane@company.com",
     note: "Must be escorted at all times",
   },
