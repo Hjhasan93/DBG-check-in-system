@@ -1,0 +1,651 @@
+:root{
+  --bg: #0b0b0b;
+  --card: #151515;
+  --card2: #101010;
+  --stroke: #2b2b2b;
+  --stroke2: #222;
+  --text: #ffffff;
+  --muted: rgba(255,255,255,0.75);
+  --gold: #b79b53;
+  --dangerBg: #3a1515;
+  --dangerStroke: #5a1e1e;
+
+  --radius: 18px;
+  --radiusSm: 12px;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+
+body{
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+}
+
+.dbgPage{
+  min-height: 100vh;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Card base */
+.dbgCard{
+  width: min(980px, 100%);
+  background: radial-gradient(1200px 600px at 50% -20%, rgba(183,155,83,0.18), transparent 60%), var(--card);
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius);
+  padding: 0;
+  box-shadow: 0 14px 40px rgba(0,0,0,0.55);
+}
+
+.dbgHeader{
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+  flex: 0 0 auto;
+}
+
+.dbgHeaderCenter{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.dbgLogo{
+  height: 70px;
+  width: auto;
+  display: block;
+  filter: drop-shadow(0 8px 20px rgba(0,0,0,0.35));
+}
+
+.dbgTitle{
+  margin: 0;
+  font-size: 34px;
+  letter-spacing: 0.2px;
+}
+
+.dbgSubtitle{
+  margin: 0 0 18px 0;
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.dbgGrid2{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.dbgGrid3{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.dbgBtn{
+  font-size: 20px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  border: 1px solid var(--stroke);
+  background: #0f0f0f;
+  color: var(--text);
+  cursor: pointer;
+  transition: transform 120ms ease, border-color 120ms ease, background 120ms ease, opacity 120ms ease;
+}
+
+.dbgBtn:hover{
+  transform: translateY(-1px);
+  border-color: rgba(183,155,83,0.55);
+}
+
+.dbgBtnPrimary{
+  background: linear-gradient(180deg, rgba(183,155,83,0.25), rgba(183,155,83,0.08));
+  border-color: rgba(183,155,83,0.45);
+}
+
+.dbgBtnPrimary:hover{
+  border-color: rgba(183,155,83,0.8);
+}
+
+.dbgBtnSecondary{
+  background: transparent;
+}
+
+.dbgInput{
+  width: 100%;
+  font-size: 18px;
+  padding: 12px 14px;
+  border-radius: var(--radiusSm);
+  border: 1px solid var(--stroke);
+  outline: none;
+  background: #0f0f0f;
+  color: var(--text);
+}
+
+.dbgInput:focus{
+  border-color: rgba(183,155,83,0.85);
+}
+
+.dbgErr{
+  margin-top: 12px;
+  background: var(--dangerBg);
+  border: 1px solid var(--dangerStroke);
+  padding: 12px;
+  border-radius: var(--radiusSm);
+}
+
+.dbgFormGrid{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.dbgLabel{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+/* Kiosk shell layout */
+.dbgPageInner{
+  width: min(980px, 92vw);
+  margin: 0 auto;
+  padding: 28px 0;
+  height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+}
+
+.dbgHeaderText{
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dbgSub{
+  margin: 0;
+  opacity: 0.85;
+}
+
+.dbgCardKiosk{
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.dbgCardBody{
+  padding: 22px;
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.dbgCardFooter{
+  padding: 18px 22px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* Print badge screen */
+.dbgPrintLayout{
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 18px;
+  align-items: start;
+}
+
+.dbgBadgeWrapper{
+  display: flex;
+  justify-content: center;
+}
+
+.dbgBadge{
+  width: 320px;
+  height: 520px;
+  border-radius: 18px;
+  background: #ffffff;
+  color: #000000;
+  overflow: hidden;
+  border: 2px solid #000;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  transform-origin: top center;
+}
+
+.dbgBadgeTop{
+  padding: 14px;
+  border-bottom: 2px solid #000;
+}
+
+.dbgBadgeType{
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.dbgBadgeName{
+  font-size: 24px;
+  font-weight: 800;
+  margin-top: 6px;
+}
+
+.dbgBadgeMeta{
+  margin-top: 6px;
+  font-size: 14px;
+}
+
+.dbgBadgeReason{
+  margin-top: 6px;
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.dbgBadgePhotoBox{
+  display: grid;
+  place-items: center;
+  background: #eee;
+}
+
+.dbgBadgePhoto{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dbgBadgeNoPhoto{
+  opacity: 0.7;
+}
+
+.dbgBadgeBottom{
+  padding: 10px;
+  border-top: 2px solid #000;
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.dbgNote{
+  grid-column: 1 / -1;
+  margin: 6px 0 0 0;
+  opacity: 0.75;
+}
+
+@media print{
+
+  @page{
+    size: 62mm 100mm;
+    margin: 1;
+  }
+
+  html, body{
+    width: 62mm;
+    height: 100mm;
+    margin: 0;
+    padding: 0;
+    background: #ffffff !important;
+  }
+
+  body *{
+    visibility: hidden !important;
+  }
+
+  #badge,
+  #badge *{
+    visibility: visible !important;
+  }
+
+  #badge{
+    position: absolute !important;
+    left: 0;
+    top: 0;
+    width: 60mm !important;
+    height: 98mm !important;
+    margin: 0;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+
+  .dbgCard,
+  .dbgCardBody,
+  .dbgCardFooter{
+    box-shadow: none !important;
+    background: transparent !important;
+    border: none !important;
+  }
+}
+
+
+/* Photo capture screen */
+.dbgPhotoLayout{
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.dbgVideoBox{
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--stroke);
+  background: #0f0f0f;
+  min-height: 520px;
+}
+
+.dbgVideo{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.dbgCountdownOverlay{
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(0,0,0,0.35);
+}
+
+.dbgCountdownNumber{
+  font-size: 96px;
+  font-weight: 800;
+}
+
+.dbgSideCard{
+  border-radius: 16px;
+  border: 1px solid var(--stroke);
+  padding: 14px;
+  background: var(--card2);
+}
+
+.dbgSideTitle{
+  font-size: 16px;
+  opacity: 0.9;
+  margin-bottom: 10px;
+}
+
+.dbgPreviewBox{
+  border-radius: 14px;
+  border: 1px solid var(--stroke);
+  background: #0f0f0f;
+  height: 220px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+
+.dbgPreviewImg{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.dbgPreviewPlaceholder{
+  opacity: 0.7;
+}
+
+.dbgHint{
+  margin-top: 12px;
+  opacity: 0.75;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+
+/* Waiver screen */
+.dbgWaiverBox{
+  border: 1px solid var(--stroke);
+  border-radius: 14px;
+  padding: 14px;
+  background: var(--card2);
+  margin-bottom: 14px;
+}
+
+.dbgWaiverText{
+  margin: 0;
+  white-space: pre-wrap;
+  font-size: 16px;
+  line-height: 1.4;
+  color: var(--text);
+}
+
+.dbgCheckRow{
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 18px;
+  margin: 4px 0 14px 0;
+}
+
+.dbgCheck{
+  width: 20px;
+  height: 20px;
+  accent-color: var(--gold);
+}
+
+.dbgSigLabel{
+  margin: 0 0 8px 0;
+  opacity: 0.9;
+}
+
+
+/* Thank you screen */
+.dbgThankYouCenter{
+  display: grid;
+  gap: 10px;
+}
+
+.dbgBigTitle{
+  font-size: 46px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.dbgThankSub{
+  font-size: 18px;
+  opacity: 0.9;
+}
+
+.dbgSummaryBox{
+  margin-top: 12px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid var(--stroke);
+  line-height: 1.8;
+  font-size: 18px;
+  background: var(--card2);
+}
+
+.dbgSmallText{
+  margin-top: 10px;
+  opacity: 0.8;
+}
+
+/* Admin */
+.dbgAdminToolbar{
+  display: grid;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.dbgAdminRange{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.dbgChip{
+  padding: 10px 14px;
+  font-size: 16px;
+}
+
+.dbgChipActive{
+  border-color: rgba(183,155,83,0.65);
+  background: linear-gradient(180deg, rgba(183,155,83,0.18), rgba(183,155,83,0.06));
+}
+
+.dbgTableWrap{
+  overflow: auto;
+  border: 1px solid var(--stroke);
+  border-radius: 14px;
+  background: #0f0f0f;
+}
+
+.dbgTable{
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.dbgTh{
+  text-align: left;
+  padding: 12px 12px;
+  border-bottom: 1px solid var(--stroke);
+  background: var(--card2);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.dbgTd{
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--stroke2);
+}
+
+.dbgTr{
+  cursor: pointer;
+}
+
+.dbgTr:hover{
+  background: rgba(183,155,83,0.06);
+}
+
+.dbgAdminFooter{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.dbgAdminTotal{
+  opacity: 0.85;
+}
+
+.dbgAdminFooterRight{
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.dbgBtnDisabled{
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+
+/* Admin detail */
+.dbgAdminLoading{
+  opacity: 0.85;
+  padding: 10px 0;
+}
+
+.dbgDetailGrid{
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 16px;
+  align-items: start;
+}
+
+.dbgDetailCard{
+  border: 1px solid var(--stroke);
+  border-radius: 16px;
+  background: var(--card2);
+  padding: 14px;
+}
+
+.dbgDetailRow{
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 12px;
+  padding: 10px 6px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.dbgDetailRow:last-child{
+  border-bottom: none;
+}
+
+.dbgDetailKey{
+  opacity: 0.8;
+  font-size: 14px;
+}
+
+.dbgDetailVal{
+  font-size: 15px;
+}
+
+.dbgMono{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  opacity: 0.9;
+}
+
+.dbgPill{
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--stroke);
+  font-size: 13px;
+}
+
+.dbgPillOk{
+  border-color: rgba(183,155,83,0.55);
+  background: rgba(183,155,83,0.12);
+}
+
+.dbgPillMuted{
+  opacity: 0.75;
+}
+
+.dbgPhotoCard{
+  border: 1px solid var(--stroke);
+  border-radius: 16px;
+  background: var(--card2);
+  padding: 14px;
+}
+
+.dbgPhotoFrame{
+  margin-top: 10px;
+  border-radius: 14px;
+  border: 1px solid var(--stroke);
+  background: #0f0f0f;
+  overflow: hidden;
+  min-height: 280px;
+  display: grid;
+  place-items: center;
+}
+
+.dbgPhotoImg{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+

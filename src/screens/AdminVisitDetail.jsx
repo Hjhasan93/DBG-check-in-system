@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { adminFetch } from "../utils/adminFetch";
+import DbgShell from "../DbgShell";
 
 export default function AdminVisitDetail() {
   const { id } = useParams();
@@ -12,7 +14,7 @@ export default function AdminVisitDetail() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch(`${BACKEND}/visits/${id}`);
+        const res = await adminFetch(`${BACKEND}/visits/${id}`);
         if (!res.ok) throw new Error();
         const data = await res.json();
         setVisit(data);
@@ -24,58 +26,137 @@ export default function AdminVisitDetail() {
   }, [BACKEND, id]);
 
   if (err) {
-    return <div style={styles.page}>{err}</div>;
+    return (
+      <DbgShell title="Admin Visit Detail" subtitle="Error">
+        <div className="dbgErr">{err}</div>
+        <div style={{ marginTop: 12 }}>
+          <button className="dbgBtn dbgBtnSecondary" onClick={() => navigate("/admin")}>
+            Back
+          </button>
+        </div>
+      </DbgShell>
+    );
   }
 
   if (!visit) {
-    return <div style={styles.page}>Loading…</div>;
+    return (
+      <DbgShell title="Admin Visit Detail" subtitle="Loading">
+        <div className="dbgAdminLoading">Loading…</div>
+      </DbgShell>
+    );
   }
 
+  const fullName = `${visit.firstName || ""} ${visit.lastName || ""}`.trim();
+
   return (
-    <div style={styles.page}>
-      <div style={styles.card}>
-        <button style={styles.back} onClick={() => navigate("/admin")}>
-          ← Back
-        </button>
+    <DbgShell
+      title={fullName || "Visit"}
+      subtitle={visit.createdAt ? new Date(visit.createdAt).toLocaleString() : ""}
+      footer={
+        <div className="dbgGrid2">
+          <button className="dbgBtn dbgBtnSecondary" onClick={() => navigate("/admin")}>
+            ← Back to Admin
+          </button>
 
-        <h1 style={styles.title}>
-          {visit.firstName} {visit.lastName}
-        </h1>
-
-        <div style={styles.grid}>
-          <div>
-            <p><b>Reason:</b> {visit.reasonLabel}</p>
-            <p><b>Badge:</b> {visit.badgeType}</p>
-            {visit.host && <p><b>Host:</b> {visit.host}</p>}
-            {visit.tourStudentName && (
-              <p><b>Touring with:</b> {visit.tourStudentName}</p>
-            )}
-            <p><b>Time:</b> {new Date(visit.createdAt).toLocaleString()}</p>
-            <p><b>Waiver:</b> {visit.waiverAccepted ? "Signed" : "Not required"}</p>
-            {visit.waiverSignedAt && (
-              <p><b>Signed at:</b> {new Date(visit.waiverSignedAt).toLocaleString()}</p>
-            )}
+          <button
+            className="dbgBtn dbgBtnPrimary"
+            onClick={() => {
+              const token = sessionStorage.getItem("dbg_admin_token") || "";
+              const params = new URLSearchParams();
+              params.set("token", token);
+              params.set("range", "all");
+              params.set("q", fullName);
+              window.open(`${BACKEND}/visits.csv?${params.toString()}`, "_blank");
+            }}
+          >
+            Export CSV (filtered)
+          </button>
+        </div>
+      }
+    >
+      <div className="dbgDetailGrid">
+        <div className="dbgDetailCard">
+          <div className="dbgDetailRow">
+            <div className="dbgDetailKey">Visit ID</div>
+            <div className="dbgDetailVal dbgMono">{visit.id || ""}</div>
           </div>
 
-          <div style={styles.photoBox}>
+          <div className="dbgDetailRow">
+            <div className="dbgDetailKey">Reason</div>
+            <div className="dbgDetailVal">{visit.reasonLabel || ""}</div>
+          </div>
+
+          <div className="dbgDetailRow">
+            <div className="dbgDetailKey">Badge</div>
+            <div className="dbgDetailVal">{visit.badgeType || ""}</div>
+          </div>
+
+          {visit.host ? (
+            <div className="dbgDetailRow">
+              <div className="dbgDetailKey">Host</div>
+              <div className="dbgDetailVal">{visit.host}</div>
+            </div>
+          ) : null}
+
+          {visit.tourStudentName ? (
+            <div className="dbgDetailRow">
+              <div className="dbgDetailKey">Touring with</div>
+              <div className="dbgDetailVal">{visit.tourStudentName}</div>
+            </div>
+          ) : null}
+
+          {visit.phone ? (
+            <div className="dbgDetailRow">
+              <div className="dbgDetailKey">Phone</div>
+              <div className="dbgDetailVal">{visit.phone}</div>
+            </div>
+          ) : null}
+
+          {visit.email ? (
+            <div className="dbgDetailRow">
+              <div className="dbgDetailKey">Email</div>
+              <div className="dbgDetailVal">{visit.email}</div>
+            </div>
+          ) : null}
+
+          <div className="dbgDetailRow">
+            <div className="dbgDetailKey">Waiver</div>
+            <div className="dbgDetailVal">
+              <span className={`dbgPill ${visit.waiverAccepted ? "dbgPillOk" : "dbgPillMuted"}`}>
+                {visit.waiverAccepted ? "Signed" : "Not signed"}
+              </span>
+            </div>
+          </div>
+
+          {visit.waiverSignedName ? (
+            <div className="dbgDetailRow">
+              <div className="dbgDetailKey">Signed name</div>
+              <div className="dbgDetailVal">{visit.waiverSignedName}</div>
+            </div>
+          ) : null}
+
+          {visit.waiverSignedAt ? (
+            <div className="dbgDetailRow">
+              <div className="dbgDetailKey">Signed at</div>
+              <div className="dbgDetailVal">
+                {new Date(visit.waiverSignedAt).toLocaleString()}
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="dbgPhotoCard">
+          <div className="dbgSideTitle">Photo</div>
+
+          <div className="dbgPhotoFrame">
             {visit.photoDataUrl ? (
-              <img src={visit.photoDataUrl} alt="Visitor" style={styles.photo} />
+              <img src={visit.photoDataUrl} alt="Visitor" className="dbgPhotoImg" />
             ) : (
-              <div>No photo</div>
+              <div className="dbgPreviewPlaceholder">No photo</div>
             )}
           </div>
         </div>
       </div>
-    </div>
+    </DbgShell>
   );
 }
-
-const styles = {
-  page: { minHeight: "100vh", background: "#0b0b0b", color: "white", padding: 24 },
-  card: { maxWidth: 1000, margin: "0 auto", background: "#151515", padding: 24, borderRadius: 18 },
-  back: { marginBottom: 12, background: "transparent", color: "white", border: "none", cursor: "pointer", fontSize: 16 },
-  title: { margin: "6px 0 18px 0" },
-  grid: { display: "grid", gridTemplateColumns: "1fr 320px", gap: 24 },
-  photoBox: { background: "#101010", borderRadius: 12, padding: 12, textAlign: "center" },
-  photo: { width: "100%", borderRadius: 12 },
-};

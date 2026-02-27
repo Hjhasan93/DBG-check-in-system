@@ -1,17 +1,23 @@
 import { useNavigate } from "react-router-dom";
 import { REASONS } from "../config/reasons";
 import { useVisit } from "../context/VisitContext";
+import dbgLogo from "../assets/dbgLogo.png";
+
 
 export default function ReasonSelect() {
   const navigate = useNavigate();
   const { setVisit } = useVisit();
 
-  function nextRouteFor(reason) {
-    if (reason.hostRequired) return "/host";
-    if (reason.photoRequired) return "/photo";
-    if (reason.waiverRequired) return "/waiver";
-    return "/thankyou";
-  }
+ function nextRouteFor(reason) {
+  // Force Tour + Appointment to go straight to staff list
+  if (reason.key === "tour" || reason.key === "appointment") return "/host";
+
+  if (reason.hostRequired) return "/host";
+  if (reason.photoRequired) return "/photo";
+  if (reason.waiverRequired) return "/waiver";
+  return "/thankyou";
+}
+
 
   function selectReason(r) {
     setVisit((v) => ({
@@ -27,28 +33,37 @@ export default function ReasonSelect() {
     navigate(nextRouteFor(r));
   }
 
-  return (
-    <div style={styles.page}>
-      <div style={styles.card}>
-        <h1 style={styles.title}>What brings you here today?</h1>
-        <p style={styles.subtitle}>Choose one option.</p>
+ return (
+  <div className="dbgPage">
+    <div className="dbgCard">
+      <div className="dbgHeader">
+        <img className="dbgLogo" src={dbgLogo} alt="DBG" />
+        <h1 className="dbgTitle">DBG Visitor Check-In</h1>
+      </div>
 
-        <div style={styles.grid}>
-          {REASONS.map((r) => (
-            <button key={r.key} style={styles.reasonBtn} onClick={() => selectReason(r)}>
-              {r.label}
-            </button>
-          ))}
-        </div>
+      <p className="dbgSubtitle">What brings you here today?</p>
 
-        <div style={{ marginTop: 18 }}>
-          <button style={styles.secondaryBtn} onClick={() => navigate("/about")}>
-            Back
+      <div className="dbgGrid2">
+        {REASONS.map((r) => (
+          <button
+            key={r.key}
+            className="dbgBtn dbgBtnPrimary"
+            onClick={() => selectReason(r)}
+          >
+            {r.label}
           </button>
-        </div>
+        ))}
+      </div>
+
+      <div style={{ marginTop: 18 }}>
+        <button className="dbgBtn dbgBtnSecondary" onClick={() => navigate("/about")}>
+          Back
+        </button>
       </div>
     </div>
-  );
+  </div>
+);
+
 }
 
 const styles = {

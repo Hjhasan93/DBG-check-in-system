@@ -1,57 +1,82 @@
 import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useVisit } from "../context/VisitContext";
-
-
+import DbgShell from "../DbgShell";
 
 export default function ThankYou() {
   const navigate = useNavigate();
   const { visit, setVisit } = useVisit();
 
+  const [secondsLeft, setSecondsLeft] = useState(5);
+
+  // ✅ prevents double-save in React StrictMode (dev)
+  const savedRef = useRef(false);
 
   useEffect(() => {
-  async function saveVisit() {
-    try {
-      const BACKEND = import.meta.env.VITE_BACKEND_URL;
-      if (!BACKEND) return;
+    async function saveVisit() {
+      try {
+        const BACKEND = import.meta.env.VITE_BACKEND_URL;
+        if (!BACKEND) return;
 
-      const payload = {
-        firstName: visit.firstName,
-        lastName: visit.lastName,
-        phone: visit.phone,
-        reasonKey: visit.reasonKey,
-        reasonLabel: visit.reasonLabel,
-        badgeType: visit.badgeType,
-        host: visit.host,
-        tourStudentId: visit.tourStudentId,
-        tourStudentName: visit.tourStudentName,
-        waiverAccepted: visit.waiverAccepted,
-        waiverSignedName: visit.waiverSignedName,
-        waiverSignedAt: visit.waiverSignedAt,
-        photoDataUrl: visit.photoDataUrl,
-      };
+        // ✅ stable id for this one check-in (used for backend dedupe if you add it)
+        let clientVisitId = sessionStorage.getItem("dbg_client_visit_id");
+        if (!clientVisitId) {
+          clientVisitId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+          sessionStorage.setItem("dbg_client_visit_id", clientVisitId);
+        }
 
-      await fetch(`${BACKEND}/visits`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-    } catch {
-      // keep silent for kiosk mode
+        const payload = {
+          clientVisitId, // ✅ add this
+          firstName: visit.firstName,
+          lastName: visit.lastName,
+          phone: visit.phone,
+          email: visit.email,
+          reasonKey: visit.reasonKey,
+          reasonLabel: visit.reasonLabel,
+          badgeType: visit.badgeType,
+          host: visit.host,
+          tourStudentId: visit.tourStudentId,
+          tourStudentName: visit.tourStudentName,
+          waiverAccepted: visit.waiverAccepted,
+          waiverSignedName: visit.waiverSignedName,
+          waiverSignedAt: visit.waiverSignedAt,
+          photoDataUrl: visit.photoDataUrl,
+        };
+
+        await fetch(`${BACKEND}/visits`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } catch {
+        // keep silent for kiosk mode
+      }
     }
-  }
 
-  // Only save when we actually have a name
-  if (visit.firstName && visit.lastName) saveVisit();
-}, [visit]);
-
+    // ✅ only save once per visit
+    if (savedRef.current) return;
+    if (visit.firstName && visit.lastName) {
+      savedRef.current = true;
+      saveVisit();
+    }
+  }, [visit.firstName, visit.lastName]); // ✅ don’t depend on whole visit object
 
   useEffect(() => {
+    setSecondsLeft(5);
+
+    const tick = setInterval(() => {
+      setSecondsLeft((s) => (s > 0 ? s - 1 : 0));
+    }, 1000);
+
     const t = setTimeout(() => {
+      // ✅ clear id so next visitor gets a fresh one
+      sessionStorage.removeItem("dbg_client_visit_id");
+
       setVisit({
         firstName: "",
         lastName: "",
         phone: "",
+        email: "",
         reasonKey: "",
         reasonLabel: "",
         badgeType: "",
@@ -66,69 +91,52 @@ export default function ThankYou() {
       navigate("/");
     }, 5000);
 
-    return () => clearTimeout(t);
+    return () => {
+      clearTimeout(t);
+      clearInterval(tick);
+    };
   }, [navigate, setVisit]);
 
   return (
-    <div style={styles.page}>
-      <div style={styles.card}>
-        <h1 style={styles.title}>Thank you.</h1>
-        <p style={styles.subtitle}>Printing your badge now.</p>
+    <DbgShell
+      title="Detroit Boxing Gym"
+      subtitle="Thank you. Your check-in is complete."
+      footer={
+        <div className="dbgGrid2">
+          <button className="dbgBtn dbgBtnSecondary" onClick={() => navigate("/")}>
+            Back to start
+          </button>
+          <button className="dbgBtn dbgBtnPrimary" onClick={() => navigate("/")}>
+            Start next check-in
+          </button>
+        </div>
+      }
+    >
+      <div className="dbgThankYouCenter">
+        <div className="dbgBigTitle">Thank you.</div>
+        <div className="dbgThankSub">Printing your badge now.</div>
 
-        <div style={styles.summary}>
-          <div><b>Name:</b> {visit.firstName} {visit.lastName}</div>
-          <div><b>Reason:</b> {visit.reasonLabel}</div>
-          <div><b>Badge:</b> {visit.badgeType}</div>
-          {visit.host ? <div><b>Host:</b> {visit.host}</div> : null}
+        <div className="dbgSummaryBox">
+          <div>
+            <b>Name:</b> {visit.firstName} {visit.lastName}
+          </div>
+          <div>
+            <b>Reason:</b> {visit.reasonLabel}
+          </div>
+          <div>
+            <b>Badge:</b> {visit.badgeType}
+          </div>
+          {visit.host ? (
+            <div>
+              <b>Host:</b> {visit.host}
+            </div>
+          ) : null}
         </div>
 
-        <p style={styles.small}>Returning to start in a few seconds.</p>
-
-        <button style={styles.secondaryBtn} onClick={() => navigate("/")}>
-          Back to start
-        </button>
+        <div className="dbgSmallText">
+          Returning to start in <b>{secondsLeft}</b> seconds.
+        </div>
       </div>
-    </div>
+    </DbgShell>
   );
 }
-
-const styles = {
-  page: {
-    minHeight: "100vh",
-    display: "grid",
-    placeItems: "center",
-    padding: 24,
-    background: "#0b0b0b",
-    color: "white",
-  },
-  card: {
-    width: "min(860px, 100%)",
-    borderRadius: 18,
-    padding: 28,
-    background: "#151515",
-    boxShadow: "0 10px 30px rgba(0,0,0,0.4)",
-    textAlign: "center",
-  },
-  title: { fontSize: 46, margin: 0 },
-  subtitle: { fontSize: 18, opacity: 0.9, marginTop: 10 },
-  summary: {
-    textAlign: "left",
-    marginTop: 18,
-    padding: 16,
-    borderRadius: 14,
-    border: "1px solid #2b2b2b",
-    lineHeight: 1.8,
-    fontSize: 18,
-  },
-  small: { marginTop: 18, opacity: 0.8 },
-  secondaryBtn: {
-    marginTop: 14,
-    fontSize: 18,
-    padding: "12px 18px",
-    borderRadius: 12,
-    border: "1px solid #2b2b2b",
-    background: "transparent",
-    color: "white",
-    cursor: "pointer",
-  },
-};

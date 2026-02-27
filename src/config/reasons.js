@@ -5,6 +5,6 @@ export const REASONS = [
   { key: "contractor", label: "Contractor/Vendor", hostRequired: false, photoRequired: true, waiverRequired: false, badgeType: "CONTRACTOR" },
   { key: "volunteer", label: "Volunteer", hostRequired: false, photoRequired: true, waiverRequired: true, badgeType: "VOLUNTEER" },
   { key: "student", label: "DBG Student", hostRequired: false, photoRequired: false, waiverRequired: false, badgeType: "STUDENT" },
-  { key: "work", label: "Work for DBG", hostRequired: false, photoRequired: false, waiverRequired: false, badgeType: "STAFF" },
+  { key: "work", label: "Employee", hostRequired: false, photoRequired: false, waiverRequired: false, badgeType: "STAFF" },
   { key: "other", label: "Other", hostRequired: false, photoRequired: true, waiverRequired: false, badgeType: "VISITOR" },
 ];

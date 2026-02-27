@@ -1,52 +1,102 @@
 import { useEffect, useMemo, useState } from "react";
+import { adminFetch } from "../utils/adminFetch";
+import DbgShell from "../DbgShell";
 
 export default function AdminVisits() {
   const BACKEND = import.meta.env.VITE_BACKEND_URL;
-  console.log("ADMIN BACKEND =", BACKEND);
-
 
   const [rows, setRows] = useState([]);
   const [q, setQ] = useState("");
   const [err, setErr] = useState("");
 
- useEffect(() => {
-  async function load() {
-    try {
-      setErr("");
-      if (!BACKEND) {
-        setErr("Backend URL missing. Set VITE_BACKEND_URL in .env and restart.");
-        return;
-      }
+  // "today" | "7" | "30" | "all" | "custom"
+  const [range, setRange] = useState("30");
 
-      const res = await fetch(`${BACKEND}/visits`);
-      const data = await res.json();
+  // YYYY-MM-DD
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
-      // Ensure rows is always an array
-      if (Array.isArray(data)) {
-        setRows(data);
-      } else if (data && Array.isArray(data.items)) {
-        setRows(data.items);
-      } else {
-        console.log("Unexpected /visits response:", data);
-        setRows([]);
-        setErr("Backend returned unexpected format for /visits");
-      }
-    } catch (e) {
-      console.log(e);
-      setErr("Could not load visits. Check backend is running.");
-    }
+  function logout() {
+    sessionStorage.removeItem("dbg_admin_unlocked");
+    window.location.assign("/admin");
   }
 
-  load();
-}, [BACKEND]);
+  useEffect(() => {
+    async function load() {
+      try {
+        setErr("");
 
+        if (!BACKEND) {
+          setErr("Backend URL missing. Set VITE_BACKEND_URL in .env and restart.");
+          setRows([]);
+          return;
+        }
 
+        const res = await adminFetch(`${BACKEND}/visits`);
+        if (!res.ok) {
+          setErr(`Backend error: ${res.status}`);
+          setRows([]);
+          return;
+        }
+
+        const data = await res.json();
+        setRows(Array.isArray(data) ? data : []);
+      } catch (e) {
+        console.log(e);
+        setErr("Could not load visits. Check backend is running.");
+        setRows([]);
+      }
+    }
+
+    load();
+  }, [BACKEND]);
+
+  function getCustomRangeMs(start, end) {
+    const startMs = start ? new Date(`${start}T00:00:00`).getTime() : 0;
+    const endMs = end ? new Date(`${end}T23:59:59`).getTime() : 0;
+    return { startMs, endMs };
+  }
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
-    if (!s) return rows;
 
-    return rows.filter((r) => {
+    // Preset range filtering
+    const now = Date.now();
+    let cutoff = 0;
+
+    if (range === "today") {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      cutoff = d.getTime();
+    } else if (range === "7") {
+      cutoff = now - 7 * 24 * 60 * 60 * 1000;
+    } else if (range === "30") {
+      cutoff = now - 30 * 24 * 60 * 60 * 1000;
+    } else {
+      cutoff = 0; // all or custom
+    }
+
+    let ranged = cutoff
+      ? rows.filter((r) => {
+          const t = r.createdAt ? new Date(r.createdAt).getTime() : 0;
+          return t >= cutoff;
+        })
+      : rows;
+
+    // Custom range overrides presets when range === "custom"
+    if (range === "custom") {
+      const { startMs, endMs } = getCustomRangeMs(startDate, endDate);
+      ranged = ranged.filter((r) => {
+        const t = r.createdAt ? new Date(r.createdAt).getTime() : 0;
+        if (startMs && t < startMs) return false;
+        if (endMs && t > endMs) return false;
+        return true;
+      });
+    }
+
+    if (!s) return ranged;
+
+    return ranged.filter((r) => {
       const name = `${r.firstName || ""} ${r.lastName || ""}`.toLowerCase();
       const reason = (r.reasonLabel || "").toLowerCase();
       const host = (r.host || "").toLowerCase();
@@ -58,159 +108,171 @@ export default function AdminVisits() {
         student.includes(s)
       );
     });
-  }, [q, rows]);
+  }, [q, rows, range, startDate, endDate]);
+
+  const csvDisabled = !BACKEND;
 
   return (
-    <div style={styles.page}>
-      <div style={styles.card}>
-        <h1 style={styles.title}>Admin Visits</h1>
-        <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
-  <button
-    style={styles.btn}
-    onClick={() => window.open(`${BACKEND}/visits.csv`, "_blank")}
-  >
-    Download CSV
-  </button>
-</div>
+    <DbgShell
+      title="Admin Visits"
+      subtitle={BACKEND ? `Backend: ${BACKEND}` : "Backend: (missing)"}
+      footer={
+        <div className="dbgAdminFooter">
+          <div className="dbgAdminTotal">Total: {filtered.length}</div>
 
+          <div className="dbgAdminFooterRight">
+            <button className="dbgBtn dbgBtnSecondary" onClick={logout}>
+              Logout
+            </button>
 
-        <div style={{ opacity: 0.8, marginBottom: 10 }}>
-  Backend: {BACKEND || "(missing)"}
-</div>
+            <button
+              className={`dbgBtn dbgBtnPrimary ${csvDisabled ? "dbgBtnDisabled" : ""}`}
+              onClick={() => {
+                const token = sessionStorage.getItem("dbg_admin_token") || "";
 
+                const params = new URLSearchParams();
+                params.set("token", token);
+                params.set("range", range);
+                params.set("q", q.trim());
+
+                if (range === "custom") {
+                  params.set("start", startDate);
+                  params.set("end", endDate);
+                }
+
+                window.open(`${BACKEND}/visits.csv?${params.toString()}`, "_blank");
+              }}
+              disabled={csvDisabled}
+            >
+              Download CSV
+            </button>
+          </div>
+        </div>
+      }
+    >
+      <div className="dbgAdminToolbar">
+        <div className="dbgAdminRange">
+          <button
+            className={`dbgBtn dbgBtnSecondary dbgChip ${range === "today" ? "dbgChipActive" : ""}`}
+            onClick={() => setRange("today")}
+            type="button"
+          >
+            Today
+          </button>
+
+          <button
+            className={`dbgBtn dbgBtnSecondary dbgChip ${range === "7" ? "dbgChipActive" : ""}`}
+            onClick={() => setRange("7")}
+            type="button"
+          >
+            7 days
+          </button>
+
+          <button
+            className={`dbgBtn dbgBtnSecondary dbgChip ${range === "30" ? "dbgChipActive" : ""}`}
+            onClick={() => setRange("30")}
+            type="button"
+          >
+            30 days
+          </button>
+
+          <button
+            className={`dbgBtn dbgBtnSecondary dbgChip ${range === "all" ? "dbgChipActive" : ""}`}
+            onClick={() => setRange("all")}
+            type="button"
+          >
+            All
+          </button>
+
+          <button
+            className={`dbgBtn dbgBtnSecondary dbgChip ${range === "custom" ? "dbgChipActive" : ""}`}
+            onClick={() => setRange("custom")}
+            type="button"
+          >
+            Custom
+          </button>
+        </div>
+
+        {range === "custom" ? (
+          <div className="dbgAdminDates">
+            <input
+              className="dbgInput"
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+            <input
+              className="dbgInput"
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+            <button
+              className="dbgBtn dbgBtnSecondary"
+              type="button"
+              onClick={() => {
+                setStartDate("");
+                setEndDate("");
+              }}
+            >
+              Clear
+            </button>
+          </div>
+        ) : null}
 
         <input
-          style={styles.input}
+          className="dbgInput"
           value={q}
-        
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search name, reason, host, student"
         />
-
-        {err ? <div style={styles.err}>{err}</div> : null}
-
-        <div style={styles.tableWrap}>
-          <table style={styles.table}>
-            <thead>
-              <tr>
-                <th style={styles.th}>Time</th>
-                <th style={styles.th}>Visitor</th>
-                <th style={styles.th}>Reason</th>
-                <th style={styles.th}>Host</th>
-                <th style={styles.th}>Touring With</th>
-                <th style={styles.th}>Waiver</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((r) => (
-               <tr
-  key={r.id}
-  onClick={() => window.location.assign(`/admin/${r.id}`)}
-  style={{ cursor: "pointer" }}
->
-
-
-
-                  <td style={styles.td}>
-                    {r.createdAt
-                      ? new Date(r.createdAt).toLocaleString()
-                      : ""}
-                  </td>
-                  <td style={styles.td}>
-                    {r.firstName} {r.lastName}
-                  </td>
-                  <td style={styles.td}>{r.reasonLabel}</td>
-                  <td style={styles.td}>{r.host || ""}</td>
-                  <td style={styles.td}>{r.tourStudentName || ""}</td>
-                  <td style={styles.td}>
-                    {r.waiverAccepted ? "Signed" : ""}
-                  </td>
-                </tr>
-              ))}
-              {filtered.length === 0 ? (
-                <tr>
-                  <td style={styles.td} colSpan={6}>
-                    No results
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
-
-        <div style={styles.footer}>Total: {filtered.length}</div>
       </div>
-    </div>
+
+      {err ? <div className="dbgErr">{err}</div> : null}
+
+      <div className="dbgTableWrap">
+        <table className="dbgTable">
+          <thead>
+            <tr>
+              <th className="dbgTh">Time</th>
+              <th className="dbgTh">Visitor</th>
+              <th className="dbgTh">Reason</th>
+              <th className="dbgTh">Host</th>
+              <th className="dbgTh">Touring With</th>
+              <th className="dbgTh">Waiver</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {filtered.map((r) => (
+              <tr
+                key={r.id}
+                onClick={() => window.location.assign(`/admin/${r.id}`)}
+                className="dbgTr"
+              >
+                <td className="dbgTd">
+                  {r.createdAt ? new Date(r.createdAt).toLocaleString() : ""}
+                </td>
+                <td className="dbgTd">
+                  {(r.firstName || "") + " " + (r.lastName || "")}
+                </td>
+                <td className="dbgTd">{r.reasonLabel || ""}</td>
+                <td className="dbgTd">{r.host || ""}</td>
+                <td className="dbgTd">{r.tourStudentName || ""}</td>
+                <td className="dbgTd">{r.waiverAccepted ? "Signed" : ""}</td>
+              </tr>
+            ))}
+
+            {filtered.length === 0 ? (
+              <tr>
+                <td className="dbgTd" colSpan={6}>
+                  No results
+                </td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
+    </DbgShell>
   );
 }
-
-const styles = {
-  page: {
-    minHeight: "100vh",
-    background: "#0b0b0b",
-    color: "white",
-    padding: 24,
-  },
-  card: {
-    width: "min(1200px, 100%)",
-    margin: "0 auto",
-    background: "#151515",
-    padding: 22,
-    borderRadius: 18,
-  },
-  title: {
-    margin: 0,
-    fontSize: 34,
-    marginBottom: 12,
-  },
-  input: {
-    width: "100%",
-    fontSize: 18,
-    padding: "12px",
-    borderRadius: 12,
-    border: "1px solid #2b2b2b",
-    outline: "none",
-    marginBottom: 12,
-  },
-  err: {
-    background: "#3a1515",
-    border: "1px solid #5a1e1e",
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 12,
-  },
-  tableWrap: {
-    overflow: "auto",
-    border: "1px solid #2b2b2b",
-    borderRadius: 14,
-  },
-  table: {
-    width: "100%",
-    borderCollapse: "collapse",
-    fontSize: 14,
-  },
-  th: {
-    textAlign: "left",
-    padding: 10,
-    borderBottom: "1px solid #2b2b2b",
-    background: "#101010",
-  },
-  td: {
-    padding: 10,
-    borderBottom: "1px solid #222",
-  },
-  footer: {
-    marginTop: 12,
-    opacity: 0.8,
-  },
-
-  btn: {
-  padding: "10px 14px",
-  borderRadius: 12,
-  border: "1px solid #2b2b2b",
-  background: "#101010",
-  color: "white",
-  cursor: "pointer",
-},
-
-};

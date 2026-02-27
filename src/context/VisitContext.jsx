@@ -7,6 +7,7 @@ export function VisitProvider({ children }) {
   firstName: "",
   lastName: "",
   phone: "",
+  email: "",
   reasonKey: "",
   reasonLabel: "",
   badgeType: "",
