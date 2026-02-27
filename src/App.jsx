@@ -17,6 +17,7 @@ import AdminVisitDetail from "./screens/AdminVisitDetail";
 import IdleReset from "./components/IdleReset";
 import AdminAutoLock from "./components/AdminAutoLock";
 import AdminGuard from "./components/AdminGuard";
+import Watchlist from "./screens/Watchlist.jsx";
 
 import { requestFullscreen, exitFullscreen, isFullscreen } from "./utils/fullscreen";
 
@@ -62,6 +63,7 @@ export default function App() {
         <Route path="/print" element={<PrintBadge />} />
         <Route path="/thankyou" element={<ThankYou />} />
         <Route path="*" element={<Welcome />} />
+        <Route path="/watchlist" element={<Watchlist />} />
 
 
         <Route
