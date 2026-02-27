@@ -9,6 +9,7 @@
   --gold: #b79b53;
   --dangerBg: #3a1515;
   --dangerStroke: #5a1e1e;
+  --bgOverlay: rgba(0,0,0,0.45);
 
   --radius: 18px;
   --radiusSm: 12px;
@@ -19,8 +20,15 @@ html, body { height: 100%; }
 
 body{
   margin: 0;
-  background: var(--bg);
+  min-height: 100vh;
   color: var(--text);
+  background-image:
+    linear-gradient(var(--bgOverlay), var(--bgOverlay)),
+    url("../assets/kiosk-bg.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji", "Segoe UI Emoji";
 }
 
@@ -30,16 +38,26 @@ body{
   display: flex;
   align-items: center;
   justify-content: center;
+  background: transparent;
 }
 
 /* Card base */
 .dbgCard{
   width: min(980px, 100%);
-  background: radial-gradient(1200px 600px at 50% -20%, rgba(183,155,83,0.18), transparent 60%), var(--card);
-  border: 1px solid var(--stroke);
   border-radius: var(--radius);
   padding: 0;
-  box-shadow: 0 14px 40px rgba(0,0,0,0.55);
+
+  /* glass look */
+  background: linear-gradient(
+      180deg,
+      rgba(255,255,255,0.10),
+      rgba(255,255,255,0.06)
+    );
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  border: 1px solid rgba(255,255,255,0.14);
+  box-shadow: 0 14px 40px rgba(0,0,0,0.45);
 }
 
 .dbgHeader{
@@ -93,8 +111,12 @@ body{
   font-size: 20px;
   padding: 16px 18px;
   border-radius: 14px;
-  border: 1px solid var(--stroke);
-  background: #0f0f0f;
+  border: 1px solid rgba(255,255,255,0.14);
+
+  background: rgba(15,15,15,0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+
   color: var(--text);
   cursor: pointer;
   transition: transform 120ms ease, border-color 120ms ease, background 120ms ease, opacity 120ms ease;
@@ -115,7 +137,7 @@ body{
 }
 
 .dbgBtnSecondary{
-  background: transparent;
+  background: rgba(0,0,0,0.25);
 }
 
 .dbgInput{
@@ -193,8 +215,8 @@ body{
 
 .dbgCardFooter{
   padding: 18px 22px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.02);
+  border-top: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.05);
 }
 
 /* Print badge screen */
@@ -647,5 +669,3 @@ body{
   object-fit: cover;
   display: block;
 }
-
-
