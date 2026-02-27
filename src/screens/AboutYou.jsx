@@ -65,11 +65,28 @@ export default function AboutYou() {
       email: emailVal,
     }));
 
-    const hit = WATCHLIST.find(
-      (w) =>
-        (w.firstName || "").toLowerCase() === firstName.toLowerCase() &&
-        (w.lastName || "").toLowerCase() === lastName.toLowerCase()
-    );
+    const cleanPhone = (s) => (s || "").replace(/\D/g, "").slice(0, 10);
+    const cleanEmail = (s) => (s || "").trim().toLowerCase();
+
+    const firstNameLower = firstName.toLowerCase();
+    const lastNameLower = lastName.toLowerCase();
+    const phoneDigits = cleanPhone(phoneNum);
+    const emailLower = cleanEmail(emailVal);
+
+    const hit = WATCHLIST.find((w) => {
+      const wFirst = (w.firstName || "").trim().toLowerCase();
+      const wLast = (w.lastName || "").trim().toLowerCase();
+      const wPhone = cleanPhone(w.phone || "");
+      const wEmail = cleanEmail(w.email || "");
+
+      const nameMatch =
+        wFirst && wLast && wFirst === firstNameLower && wLast === lastNameLower;
+
+      const phoneMatch = wPhone && phoneDigits && wPhone === phoneDigits;
+      const emailMatch = wEmail && emailLower && wEmail === emailLower;
+
+      return nameMatch || phoneMatch || emailMatch;
+    });
 
     if (hit) {
       navigate("/watchlist");
