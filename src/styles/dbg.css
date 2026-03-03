@@ -1,3 +1,4 @@
+
 :root{
   --bg: #0b0b0b;
   --card: #151515;
@@ -348,7 +349,6 @@ body{
   }
 }
 
-
 /* Photo capture screen */
 .dbgPhotoLayout{
   display: grid;
@@ -427,7 +427,6 @@ body{
   line-height: 1.35;
 }
 
-
 /* Waiver screen */
 .dbgWaiverBox{
   border: 1px solid var(--stroke);
@@ -463,7 +462,6 @@ body{
   margin: 0 0 8px 0;
   opacity: 0.9;
 }
-
 
 /* Thank you screen */
 .dbgThankYouCenter{
@@ -580,7 +578,6 @@ body{
   pointer-events: none;
 }
 
-
 /* Admin detail */
 .dbgAdminLoading{
   opacity: 0.85;
@@ -679,8 +676,9 @@ body{
 }
 
 .dbgFooterLogo{
-  height: 350px;
-  width: 850px;
+  height: 80px;
+  width: 950px;
   opacity: 0.90;
   filter: drop-shadow(0 8px 18px rgba(0,0,0,0.35));
 }
+
