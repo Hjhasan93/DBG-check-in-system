@@ -669,3 +669,18 @@ body{
   object-fit: cover;
   display: block;
 }
+
+.dbgFooterLogoWrap{
+  display: flex;
+  justify-content: center;
+  padding: 14px 22px 18px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.02);
+}
+
+.dbgFooterLogo{
+  height: 350px;
+  width: 850px;
+  opacity: 0.90;
+  filter: drop-shadow(0 8px 18px rgba(0,0,0,0.35));
+}

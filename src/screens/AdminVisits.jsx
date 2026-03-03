@@ -9,15 +9,15 @@ export default function AdminVisits() {
   const [q, setQ] = useState("");
   const [err, setErr] = useState("");
 
-  // "today" | "7" | "30" | "all" | "custom"
-  const [range, setRange] = useState("30");
+  const [viewMode, setViewMode] = useState("visits"); // "visits" | "watchlist"
 
-  // YYYY-MM-DD
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [range, setRange] = useState("30"); // "today" | "7" | "30" | "all" | "custom"
+  const [startDate, setStartDate] = useState(""); // YYYY-MM-DD
+  const [endDate, setEndDate] = useState(""); // YYYY-MM-DD
 
   function logout() {
     sessionStorage.removeItem("dbg_admin_unlocked");
+    sessionStorage.removeItem("dbg_admin_token");
     window.location.assign("/admin");
   }
 
@@ -32,7 +32,11 @@ export default function AdminVisits() {
           return;
         }
 
-        const res = await adminFetch(`${BACKEND}/visits`);
+        const endpoint =
+          viewMode === "watchlist" ? `${BACKEND}/watchlist-hit` : `${BACKEND}/visits`;
+
+        const res = await adminFetch(endpoint);
+
         if (!res.ok) {
           setErr(`Backend error: ${res.status}`);
           setRows([]);
@@ -43,74 +47,76 @@ export default function AdminVisits() {
         setRows(Array.isArray(data) ? data : []);
       } catch (e) {
         console.log(e);
-        setErr("Could not load visits. Check backend is running.");
+        setErr("Could not load data. Check backend is running and admin token is valid.");
         setRows([]);
       }
     }
 
     load();
-  }, [BACKEND]);
+  }, [BACKEND, viewMode]);
 
-  function getCustomRangeMs(start, end) {
-    const startMs = start ? new Date(`${start}T00:00:00`).getTime() : 0;
-    const endMs = end ? new Date(`${end}T23:59:59`).getTime() : 0;
+  function getRangeCutoffMs(rangeKey) {
+    const now = Date.now();
+
+    if (rangeKey === "today") {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      return { startMs: d.getTime(), endMs: 0 };
+    }
+
+    if (rangeKey === "7") return { startMs: now - 7 * 24 * 60 * 60 * 1000, endMs: 0 };
+    if (rangeKey === "30") return { startMs: now - 30 * 24 * 60 * 60 * 1000, endMs: 0 };
+    if (rangeKey === "all") return { startMs: 0, endMs: 0 };
+
+    // custom
+    const startMs = startDate ? new Date(`${startDate}T00:00:00`).getTime() : 0;
+    const endMs = endDate ? new Date(`${endDate}T23:59:59`).getTime() : 0;
     return { startMs, endMs };
   }
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
+    const { startMs, endMs } = getRangeCutoffMs(range);
 
-    // Preset range filtering
-    const now = Date.now();
-    let cutoff = 0;
+    // date filter
+    let ranged = rows.filter((r) => {
+      const t = r.createdAt ? new Date(r.createdAt).getTime() : 0;
+      if (startMs && t < startMs) return false;
+      if (endMs && t > endMs) return false;
+      return true;
+    });
 
-    if (range === "today") {
-      const d = new Date();
-      d.setHours(0, 0, 0, 0);
-      cutoff = d.getTime();
-    } else if (range === "7") {
-      cutoff = now - 7 * 24 * 60 * 60 * 1000;
-    } else if (range === "30") {
-      cutoff = now - 30 * 24 * 60 * 60 * 1000;
-    } else {
-      cutoff = 0; // all or custom
-    }
+    // search filter
+    if (!s) return ranged;
 
-    let ranged = cutoff
-      ? rows.filter((r) => {
-          const t = r.createdAt ? new Date(r.createdAt).getTime() : 0;
-          return t >= cutoff;
-        })
-      : rows;
-
-    // Custom range overrides presets when range === "custom"
-    if (range === "custom") {
-      const { startMs, endMs } = getCustomRangeMs(startDate, endDate);
-      ranged = ranged.filter((r) => {
-        const t = r.createdAt ? new Date(r.createdAt).getTime() : 0;
-        if (startMs && t < startMs) return false;
-        if (endMs && t > endMs) return false;
-        return true;
+    if (viewMode === "visits") {
+      return ranged.filter((r) => {
+        const name = `${r.firstName || ""} ${r.lastName || ""}`.toLowerCase();
+        const reason = (r.reasonLabel || "").toLowerCase();
+        const host = (r.host || "").toLowerCase();
+        const student = (r.tourStudentName || "").toLowerCase();
+        return name.includes(s) || reason.includes(s) || host.includes(s) || student.includes(s);
       });
     }
 
-    if (!s) return ranged;
-
+    // watchlist hits
     return ranged.filter((r) => {
       const name = `${r.firstName || ""} ${r.lastName || ""}`.toLowerCase();
-      const reason = (r.reasonLabel || "").toLowerCase();
-      const host = (r.host || "").toLowerCase();
-      const student = (r.tourStudentName || "").toLowerCase();
+      const phone = (r.phone || "").toLowerCase();
+      const email = (r.email || "").toLowerCase();
+      const matchedBy = (r.matchedBy || "").toLowerCase();
+      const note = (r.note || "").toLowerCase();
       return (
         name.includes(s) ||
-        reason.includes(s) ||
-        host.includes(s) ||
-        student.includes(s)
+        phone.includes(s) ||
+        email.includes(s) ||
+        matchedBy.includes(s) ||
+        note.includes(s)
       );
     });
-  }, [q, rows, range, startDate, endDate]);
+  }, [q, rows, range, startDate, endDate, viewMode]);
 
-  const csvDisabled = !BACKEND;
+  const csvDisabled = !BACKEND || viewMode !== "visits";
 
   return (
     <DbgShell
@@ -135,14 +141,10 @@ export default function AdminVisits() {
                 params.set("range", range);
                 params.set("q", q.trim());
 
-                if (range === "custom") {
-                  params.set("start", startDate);
-                  params.set("end", endDate);
-                }
-
                 window.open(`${BACKEND}/visits.csv?${params.toString()}`, "_blank");
               }}
               disabled={csvDisabled}
+              title={viewMode !== "visits" ? "CSV export is for Visits only" : ""}
             >
               Download CSV
             </button>
@@ -151,6 +153,28 @@ export default function AdminVisits() {
       }
     >
       <div className="dbgAdminToolbar">
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button
+            className={`dbgBtn dbgBtnSecondary dbgChip ${
+              viewMode === "visits" ? "dbgChipActive" : ""
+            }`}
+            onClick={() => setViewMode("visits")}
+            type="button"
+          >
+            Visits
+          </button>
+
+          <button
+            className={`dbgBtn dbgBtnSecondary dbgChip ${
+              viewMode === "watchlist" ? "dbgChipActive" : ""
+            }`}
+            onClick={() => setViewMode("watchlist")}
+            type="button"
+          >
+            Watchlist Hits
+          </button>
+        </div>
+
         <div className="dbgAdminRange">
           <button
             className={`dbgBtn dbgBtnSecondary dbgChip ${range === "today" ? "dbgChipActive" : ""}`}
@@ -159,7 +183,6 @@ export default function AdminVisits() {
           >
             Today
           </button>
-
           <button
             className={`dbgBtn dbgBtnSecondary dbgChip ${range === "7" ? "dbgChipActive" : ""}`}
             onClick={() => setRange("7")}
@@ -167,7 +190,6 @@ export default function AdminVisits() {
           >
             7 days
           </button>
-
           <button
             className={`dbgBtn dbgBtnSecondary dbgChip ${range === "30" ? "dbgChipActive" : ""}`}
             onClick={() => setRange("30")}
@@ -175,7 +197,6 @@ export default function AdminVisits() {
           >
             30 days
           </button>
-
           <button
             className={`dbgBtn dbgBtnSecondary dbgChip ${range === "all" ? "dbgChipActive" : ""}`}
             onClick={() => setRange("all")}
@@ -183,9 +204,10 @@ export default function AdminVisits() {
           >
             All
           </button>
-
           <button
-            className={`dbgBtn dbgBtnSecondary dbgChip ${range === "custom" ? "dbgChipActive" : ""}`}
+            className={`dbgBtn dbgBtnSecondary dbgChip ${
+              range === "custom" ? "dbgChipActive" : ""
+            }`}
             onClick={() => setRange("custom")}
             type="button"
           >
@@ -194,29 +216,26 @@ export default function AdminVisits() {
         </div>
 
         {range === "custom" ? (
-          <div className="dbgAdminDates">
-            <input
-              className="dbgInput"
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
-            <input
-              className="dbgInput"
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
-            <button
-              className="dbgBtn dbgBtnSecondary"
-              type="button"
-              onClick={() => {
-                setStartDate("");
-                setEndDate("");
-              }}
-            >
-              Clear
-            </button>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <label className="dbgLabel" style={{ minWidth: 220 }}>
+              Start date
+              <input
+                className="dbgInput"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+            </label>
+
+            <label className="dbgLabel" style={{ minWidth: 220 }}>
+              End date
+              <input
+                className="dbgInput"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </label>
           </div>
         ) : null}
 
@@ -224,7 +243,11 @@ export default function AdminVisits() {
           className="dbgInput"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search name, reason, host, student"
+          placeholder={
+            viewMode === "visits"
+              ? "Search name, reason, host, student"
+              : "Search name, phone, email, matchedBy, note"
+          }
         />
       </div>
 
@@ -233,35 +256,57 @@ export default function AdminVisits() {
       <div className="dbgTableWrap">
         <table className="dbgTable">
           <thead>
-            <tr>
-              <th className="dbgTh">Time</th>
-              <th className="dbgTh">Visitor</th>
-              <th className="dbgTh">Reason</th>
-              <th className="dbgTh">Host</th>
-              <th className="dbgTh">Touring With</th>
-              <th className="dbgTh">Waiver</th>
-            </tr>
+            {viewMode === "visits" ? (
+              <tr>
+                <th className="dbgTh">Time</th>
+                <th className="dbgTh">Visitor</th>
+                <th className="dbgTh">Reason</th>
+                <th className="dbgTh">Host</th>
+                <th className="dbgTh">Touring With</th>
+                <th className="dbgTh">Waiver</th>
+              </tr>
+            ) : (
+              <tr>
+                <th className="dbgTh">Time</th>
+                <th className="dbgTh">Name</th>
+                <th className="dbgTh">Phone</th>
+                <th className="dbgTh">Email</th>
+                <th className="dbgTh">Matched By</th>
+                <th className="dbgTh">Note</th>
+              </tr>
+            )}
           </thead>
 
           <tbody>
-            {filtered.map((r) => (
-              <tr
-                key={r.id}
-                onClick={() => window.location.assign(`/admin/${r.id}`)}
-                className="dbgTr"
-              >
-                <td className="dbgTd">
-                  {r.createdAt ? new Date(r.createdAt).toLocaleString() : ""}
-                </td>
-                <td className="dbgTd">
-                  {(r.firstName || "") + " " + (r.lastName || "")}
-                </td>
-                <td className="dbgTd">{r.reasonLabel || ""}</td>
-                <td className="dbgTd">{r.host || ""}</td>
-                <td className="dbgTd">{r.tourStudentName || ""}</td>
-                <td className="dbgTd">{r.waiverAccepted ? "Signed" : ""}</td>
-              </tr>
-            ))}
+            {filtered.map((r) =>
+              viewMode === "visits" ? (
+                <tr
+                  key={r.id}
+                  onClick={() => window.location.assign(`/admin/${r.id}`)}
+                  className="dbgTr"
+                >
+                  <td className="dbgTd">
+                    {r.createdAt ? new Date(r.createdAt).toLocaleString() : ""}
+                  </td>
+                  <td className="dbgTd">{`${r.firstName || ""} ${r.lastName || ""}`}</td>
+                  <td className="dbgTd">{r.reasonLabel || ""}</td>
+                  <td className="dbgTd">{r.host || ""}</td>
+                  <td className="dbgTd">{r.tourStudentName || ""}</td>
+                  <td className="dbgTd">{r.waiverAccepted ? "Signed" : ""}</td>
+                </tr>
+              ) : (
+                <tr key={r.id} className="dbgTr">
+                  <td className="dbgTd">
+                    {r.createdAt ? new Date(r.createdAt).toLocaleString() : ""}
+                  </td>
+                  <td className="dbgTd">{`${r.firstName || ""} ${r.lastName || ""}`}</td>
+                  <td className="dbgTd">{r.phone || ""}</td>
+                  <td className="dbgTd">{r.email || ""}</td>
+                  <td className="dbgTd">{r.matchedBy || ""}</td>
+                  <td className="dbgTd">{r.note || ""}</td>
+                </tr>
+              )
+            )}
 
             {filtered.length === 0 ? (
               <tr>

@@ -6,6 +6,9 @@ import { WATCHLIST } from "../config/watchlist";
 const onlyLetters = (s) => s.replace(/[^a-zA-Z]/g, "");
 const onlyDigits = (s) => s.replace(/\D/g, "");
 
+const cleanPhone = (s) => (s || "").replace(/\D/g, "").slice(0, 10);
+const cleanEmail = (s) => (s || "").trim().toLowerCase();
+
 export default function AboutYou() {
   const navigate = useNavigate();
   const { visit, setVisit } = useVisit();
@@ -34,7 +37,43 @@ export default function AboutYou() {
     return () => clearTimeout(t);
   }, [navigate]);
 
-  function onNext() {
+  function resetVisitAndGoHome() {
+    setVisit({
+      firstName: "",
+      lastName: "",
+      phone: "",
+      email: "",
+      reasonKey: "",
+      reasonLabel: "",
+      badgeType: "",
+      host: "",
+      photoDataUrl: "",
+      waiverAccepted: false,
+      waiverSignedName: "",
+      waiverSignedAt: "",
+      tourStudentId: "",
+      tourStudentName: "",
+    });
+
+    navigate("/", { replace: true });
+  }
+
+  async function notifyWatchlistHit(payload) {
+    try {
+      const BACKEND = import.meta.env.VITE_BACKEND_URL;
+      if (!BACKEND) return;
+
+      await fetch(`${BACKEND}/watchlist-hit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    } catch {
+      // silent for kiosk
+    }
+  }
+
+  async function onNext() {
     setError("");
 
     const firstName = first.trim();
@@ -57,22 +96,14 @@ export default function AboutYou() {
       return;
     }
 
-    setVisit((v) => ({
-      ...v,
-      firstName,
-      lastName,
-      phone: phoneNum,
-      email: emailVal,
-    }));
-
-    const cleanPhone = (s) => (s || "").replace(/\D/g, "").slice(0, 10);
-    const cleanEmail = (s) => (s || "").trim().toLowerCase();
-
+    // Build normalized values for matching
     const firstNameLower = firstName.toLowerCase();
     const lastNameLower = lastName.toLowerCase();
     const phoneDigits = cleanPhone(phoneNum);
     const emailLower = cleanEmail(emailVal);
 
+    // Find hit + how it matched
+    let matchedBy = "";
     const hit = WATCHLIST.find((w) => {
       const wFirst = (w.firstName || "").trim().toLowerCase();
       const wLast = (w.lastName || "").trim().toLowerCase();
@@ -85,13 +116,37 @@ export default function AboutYou() {
       const phoneMatch = wPhone && phoneDigits && wPhone === phoneDigits;
       const emailMatch = wEmail && emailLower && wEmail === emailLower;
 
+      if (nameMatch) matchedBy = "name";
+      else if (phoneMatch) matchedBy = "phone";
+      else if (emailMatch) matchedBy = "email";
+
       return nameMatch || phoneMatch || emailMatch;
     });
 
     if (hit) {
-      navigate("/watchlist");
+      // notify admin (backend) then silently reset and go home
+      notifyWatchlistHit({
+        createdAt: new Date().toISOString(),
+        firstName,
+        lastName,
+        phone: phoneDigits,
+        email: emailLower,
+        note: hit.note || "",
+        matchedBy,
+      });
+
+      resetVisitAndGoHome();
       return;
     }
+
+    // Save into context only if not watchlisted
+    setVisit((v) => ({
+      ...v,
+      firstName,
+      lastName,
+      phone: phoneDigits,
+      email: emailVal,
+    }));
 
     navigate("/reason");
   }
@@ -148,7 +203,9 @@ export default function AboutYou() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               onBlur={() => {
-                if (email.trim() && !emailOk) setError("Please enter a valid email address.");
+                if (email.trim() && !emailOk) {
+                  setError("Please enter a valid email address.");
+                }
               }}
               placeholder="name@example.com"
               inputMode="email"
