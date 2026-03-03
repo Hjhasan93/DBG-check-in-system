@@ -30,7 +30,8 @@ body{
   background-position: center;
   background-repeat: no-repeat;
   background-attachment: fixed;
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  font-family: 'Inter', sans-serif;
+
 }
 
 .dbgPage{
@@ -86,8 +87,11 @@ body{
 
 .dbgTitle{
   margin: 0;
-  font-size: 34px;
-  letter-spacing: 0.2px;
+  color: var(--gold);
+  font-size: 40px;
+  font-family: 'Playfair Display', serif;
+  font-weight: 700;
+  letter-spacing: 0.5px;
 }
 
 .dbgSubtitle{
@@ -109,7 +113,7 @@ body{
 }
 
 .dbgBtn{
-  font-size: 20px;
+  font-size: 17px;
   padding: 16px 18px;
   border-radius: 14px;
   border: 1px solid rgba(255,255,255,0.14);
@@ -122,6 +126,8 @@ body{
   cursor: pointer;
   transition: transform 120ms ease, border-color 120ms ease, background 120ms ease, opacity 120ms ease;
 }
+
+
 
 .dbgBtn:hover{
   transform: translateY(-1px);
@@ -240,7 +246,7 @@ body{
   background: #ffffff;
   color: #000000;
   overflow: hidden;
-  border: 2px solid #000;
+  border: 2px solid #0000;
   display: grid;
   grid-template-rows: auto 1fr auto;
   transform-origin: top center;
@@ -252,16 +258,17 @@ body{
 }
 
 .dbgBadgeType{
-  font-size: 28px;
-  font-weight: 900;
-  letter-spacing: 1px;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 2px;
   text-transform: uppercase;
 }
 
 .dbgBadgeName{
-  font-size: 24px;
-  font-weight: 800;
-  margin-top: 6px;
+  font-size: 30px;
+  font-family: 'Playfair Display', serif;
+  font-weight: 700;
+  letter-spacing: 1px;
 }
 
 .dbgBadgeMeta{
