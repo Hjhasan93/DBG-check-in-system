@@ -1,4 +1,3 @@
-
 :root{
   --bg: #0b0b0b;
   --card: #151515;
@@ -6,22 +5,25 @@
   --stroke: #2b2b2b;
   --stroke2: #222;
   --text: #ffffff;
-  --muted: rgba(255,255,255,0.75);
+  --muted: rgba(255,255,255,0.78);
   --gold: #b79b53;
   --dangerBg: #3a1515;
   --dangerStroke: #5a1e1e;
-  --bgOverlay: rgba(0,0,0,0.45);
+  --bgOverlay: rgba(0,0,0,0.42);
 
   --radius: 18px;
   --radiusSm: 12px;
 }
 
 * { box-sizing: border-box; }
-html, body { height: 100%; }
+.dbgCardKiosk{
+  overflow: visible;
+}
 
 body{
   margin: 0;
   min-height: 100vh;
+  overflow-y: auto;
   color: var(--text);
   background-image:
     linear-gradient(var(--bgOverlay), var(--bgOverlay)),
@@ -30,36 +32,116 @@ body{
   background-position: center;
   background-repeat: no-repeat;
   background-attachment: fixed;
-  font-family: 'Inter', sans-serif;
-
+  font-family: "Inter", sans-serif;
 }
 
 .dbgPage{
   min-height: 100vh;
   padding: 24px;
+  
+  background: transparent;
+}
+
+/* Main shell width */
+.dbgPageInner{
+  width: min(1380px, 95vw);
+  margin: 0 auto;
+  padding: 20px 0;
+  display: block;
+  
+}
+
+/* Global header */
+.dbgGlobalHeaderBar{
+  width: 100%;
+  min-height: 96px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: transparent;
+  padding: 16px 28px;
+  margin-bottom: 16px;
+
+  background: linear-gradient(
+    180deg,
+    rgba(255,255,255,0.18),
+    rgba(255,255,255,0.10)
+  );
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 22px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.28);
+}
+
+.dbgGlobalHeaderLogo{
+  height: 74px;
+  width: auto;
+  max-width: 560px;
+  display: block;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 18px rgba(0,0,0,0.22));
+}
+
+/* Global footer */
+.dbgGlobalFooterBar{
+  width: 100%;
+  min-height: 92px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 28px;
+  margin-top: 16px;
+
+  background: linear-gradient(
+    180deg,
+    rgba(255,255,255,0.16),
+    rgba(255,255,255,0.08)
+  );
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 22px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.22);
+}
+
+.dbgGlobalFooterLogo{
+  height: 62px;
+  width: auto;
+  max-width: 640px;
+  display: block;
+  object-fit: contain;
+  opacity: 0.96;
+  filter: drop-shadow(0 8px 18px rgba(0,0,0,0.18));
 }
 
 /* Card base */
 .dbgCard{
-  width: min(980px, 100%);
+  width: min(1120px, 100%);
+  margin: 0 auto;
   border-radius: var(--radius);
   padding: 0;
-
-  /* glass look */
-  background: linear-gradient(
-      180deg,
-      rgba(255,255,255,0.10),
-      rgba(255,255,255,0.06)
-    );
+  background: rgba(20, 20, 20, 0.72);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-
   border: 1px solid rgba(255,255,255,0.14);
-  box-shadow: 0 14px 40px rgba(0,0,0,0.45);
+  box-shadow: 0 12px 34px rgba(0,0,0,0.40);
+}
+
+.dbgPageInner{
+  width: min(1380px, 95vw);
+  margin: 0 auto;
+  padding: 20px 0;
+}
+
+.dbgCardBody{
+  padding: 22px;
+  overflow: visible;
+}
+
+.dbgCardFooter{
+  padding: 18px 22px;
+  border-top: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.05);
 }
 
 .dbgHeader{
@@ -78,6 +160,12 @@ body{
   margin-bottom: 20px;
 }
 
+.dbgHeaderText{
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .dbgLogo{
   height: 70px;
   width: auto;
@@ -89,7 +177,7 @@ body{
   margin: 0;
   color: var(--gold);
   font-size: 40px;
-  font-family: 'Playfair Display', serif;
+  font-family: "Playfair Display", serif;
   font-weight: 700;
   letter-spacing: 0.5px;
 }
@@ -98,6 +186,14 @@ body{
   margin: 0 0 18px 0;
   color: var(--muted);
   font-size: 16px;
+}
+
+.dbgSub{
+  margin: 0;
+  opacity: 0.88;
+  font-size: 18px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.88);
 }
 
 .dbgGrid2{
@@ -114,20 +210,18 @@ body{
 
 .dbgBtn{
   font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
   padding: 16px 18px;
   border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.14);
-
-  background: rgba(15,15,15,0.55);
+  border: 1px solid rgba(255,255,255,0.16);
+  background: rgba(25, 25, 25, 0.58);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
-
   color: var(--text);
   cursor: pointer;
   transition: transform 120ms ease, border-color 120ms ease, background 120ms ease, opacity 120ms ease;
 }
-
-
 
 .dbgBtn:hover{
   transform: translateY(-1px);
@@ -135,31 +229,39 @@ body{
 }
 
 .dbgBtnPrimary{
-  background: linear-gradient(180deg, rgba(183,155,83,0.25), rgba(183,155,83,0.08));
-  border-color: rgba(183,155,83,0.45);
+  background: linear-gradient(180deg, rgba(183,155,83,0.24), rgba(183,155,83,0.08));
+  border-color: rgba(183,155,83,0.42);
 }
 
 .dbgBtnPrimary:hover{
-  border-color: rgba(183,155,83,0.8);
+  border-color: rgba(183,155,83,0.72);
 }
 
 .dbgBtnSecondary{
-  background: rgba(0,0,0,0.25);
+  background: rgba(30, 30, 30, 0.46);
 }
 
+/* Inputs */
 .dbgInput{
   width: 100%;
   font-size: 18px;
   padding: 12px 14px;
   border-radius: var(--radiusSm);
-  border: 1px solid var(--stroke);
+  border: 1px solid rgba(255,255,255,0.22);
   outline: none;
-  background: #0f0f0f;
+  background: rgba(255,255,255,0.12);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   color: var(--text);
 }
 
+.dbgInput::placeholder{
+  color: rgba(255,255,255,0.62);
+}
+
 .dbgInput:focus{
-  border-color: rgba(183,155,83,0.85);
+  border-color: rgba(183,155,83,0.88);
+  background: rgba(255,255,255,0.16);
 }
 
 .dbgErr{
@@ -181,49 +283,8 @@ body{
   flex-direction: column;
   gap: 8px;
   font-size: 14px;
-  color: var(--muted);
-}
-
-/* Kiosk shell layout */
-.dbgPageInner{
-  width: min(980px, 92vw);
-  margin: 0 auto;
-  padding: 28px 0;
-  height: calc(100vh - 48px);
-  display: flex;
-  flex-direction: column;
-}
-
-.dbgHeaderText{
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.dbgSub{
-  margin: 0;
-  opacity: 0.85;
-}
-
-.dbgCardKiosk{
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-}
-
-.dbgCardBody{
-  padding: 22px;
-  overflow: auto;
-  flex: 1;
-  min-height: 0;
-}
-
-.dbgCardFooter{
-  padding: 18px 22px;
-  border-top: 1px solid rgba(255,255,255,0.10);
-  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.92);
+  font-weight: 500;
 }
 
 /* Print badge screen */
@@ -246,7 +307,7 @@ body{
   background: #ffffff;
   color: #000000;
   overflow: hidden;
-  border: 2px solid #0000;
+  border: 2px solid #000;
   display: grid;
   grid-template-rows: auto 1fr auto;
   transform-origin: top center;
@@ -266,7 +327,7 @@ body{
 
 .dbgBadgeName{
   font-size: 30px;
-  font-family: 'Playfair Display', serif;
+  font-family: "Playfair Display", serif;
   font-weight: 700;
   letter-spacing: 1px;
 }
@@ -313,7 +374,6 @@ body{
 }
 
 @media print{
-
   @page{
     size: 62mm 100mm;
     margin: 1;
@@ -321,7 +381,7 @@ body{
 
   html, body{
     width: 62mm;
-    height: 100mm;
+    min-height: 100mm;
     margin: 0;
     padding: 0;
     background: #ffffff !important;
@@ -357,20 +417,14 @@ body{
 }
 
 /* Photo capture screen */
-.dbgPhotoLayout{
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 16px;
-  align-items: start;
-}
-
 .dbgVideoBox{
   position: relative;
   border-radius: 16px;
   overflow: hidden;
   border: 1px solid var(--stroke);
   background: #0f0f0f;
-  min-height: 520px;
+  height: min(44vh, 360px);
+  min-height: 260px;
 }
 
 .dbgVideo{
@@ -398,22 +452,28 @@ body{
   border: 1px solid var(--stroke);
   padding: 14px;
   background: var(--card2);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  min-height: 0;
 }
 
 .dbgSideTitle{
   font-size: 16px;
   opacity: 0.9;
-  margin-bottom: 10px;
+  margin-bottom: 0;
 }
 
 .dbgPreviewBox{
   border-radius: 14px;
   border: 1px solid var(--stroke);
   background: #0f0f0f;
-  height: 220px;
+  height: 140px;
   overflow: hidden;
   display: grid;
   place-items: center;
+  flex: 0 0 auto;
 }
 
 .dbgPreviewImg{
@@ -427,8 +487,14 @@ body{
   opacity: 0.7;
 }
 
+.dbgPhotoActions{
+  display: grid;
+  gap: 10px;
+  margin-top: auto;
+}
+
 .dbgHint{
-  margin-top: 12px;
+  margin-top: 0;
   opacity: 0.75;
   font-size: 14px;
   line-height: 1.35;
@@ -674,18 +740,10 @@ body{
   display: block;
 }
 
-.dbgFooterLogoWrap{
-  display: flex;
-  justify-content: center;
-  padding: 14px 22px 18px;
-  border-top: 1px solid rgba(255,255,255,0.06);
-  background: rgba(255,255,255,0.02);
+html, body {
+  overflow-x: hidden;
 }
 
-.dbgFooterLogo{
-  height: 80px;
-  width: 950px;
-  opacity: 0.90;
-  filter: drop-shadow(0 8px 18px rgba(0,0,0,0.35));
+body {
+  overflow-y: auto;
 }
-

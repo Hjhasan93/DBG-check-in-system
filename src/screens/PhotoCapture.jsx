@@ -83,29 +83,6 @@ export default function PhotoCapture() {
     <DbgShell
       title="Detroit Boxing Gym"
       subtitle="Take your photo. Stand in the frame, we’ll take it after a short countdown."
-      footer={
-        <div className="dbgGrid3">
-          <button
-            className="dbgBtn dbgBtnPrimary"
-            onClick={startCountdownAndCapture}
-            disabled={!!error || countdown !== null}
-          >
-            {countdown !== null ? "Capturing..." : "Start Countdown"}
-          </button>
-
-          <button className="dbgBtn dbgBtnSecondary" onClick={() => navigate("/reason")}>
-            Back
-          </button>
-
-          <button
-            className="dbgBtn dbgBtnPrimary"
-            disabled={!preview}
-            onClick={routeNext}
-          >
-            Continue
-          </button>
-        </div>
-      }
     >
       {error ? <div className="dbgErr">{error}</div> : null}
 
@@ -135,6 +112,31 @@ export default function PhotoCapture() {
 
           <div className="dbgHint">
             If the camera is blocked, allow permissions in the browser, then try again.
+          </div>
+
+          <div className="dbgPhotoActions">
+            <button
+              className="dbgBtn dbgBtnPrimary"
+              onClick={startCountdownAndCapture}
+              disabled={!!error || countdown !== null}
+            >
+              {countdown !== null ? "Capturing..." : "Start Countdown"}
+            </button>
+
+            <button
+              className="dbgBtn dbgBtnSecondary"
+              onClick={() => navigate("/reason")}
+            >
+              Back
+            </button>
+
+            <button
+              className="dbgBtn dbgBtnPrimary"
+              disabled={!preview}
+              onClick={routeNext}
+            >
+              Continue
+            </button>
           </div>
         </div>
       </div>
