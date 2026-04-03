@@ -15,6 +15,10 @@
   --radiusSm: 12px;
 }
 
+* {
+  font-family: "Barlow Condensed", sans-serif !important;
+}
+
 * { box-sizing: border-box; }
 .dbgCardKiosk{
   overflow: visible;
@@ -32,7 +36,7 @@ body{
   background-position: center;
   background-repeat: no-repeat;
   background-attachment: fixed;
-  font-family: "Inter", sans-serif;
+  font-family: "Barlow Condensed", sans-serif;
 }
 
 .dbgPage{
@@ -58,19 +62,19 @@ body{
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px 28px;
+  padding: 16px 38px;
   margin-bottom: 16px;
 
   background: linear-gradient(
     180deg,
-    rgba(255,255,255,0.18),
+    rgba(255, 255, 255, 0),
     rgba(255,255,255,0.10)
   );
   border: 1px solid rgba(255,255,255,0.18);
   border-radius: 22px;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 12px 28px rgba(0,0,0,0.28);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.28);
 }
 
 .dbgGlobalHeaderLogo{
@@ -101,7 +105,7 @@ body{
   border-radius: 22px;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 12px 28px rgba(0,0,0,0.22);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.22);
 }
 
 .dbgGlobalFooterLogo{
@@ -124,11 +128,11 @@ body{
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border: 1px solid rgba(255,255,255,0.14);
-  box-shadow: 0 12px 34px rgba(0,0,0,0.40);
+  box-shadow: 0 12px 24px rgba(0,0,0,0.40);
 }
 
 .dbgPageInner{
-  width: min(1380px, 95vw);
+  width: min(1380px, 55vw);
   margin: 0 auto;
   padding: 20px 0;
 }
@@ -176,24 +180,32 @@ body{
 .dbgTitle{
   margin: 0;
   color: var(--gold);
-  font-size: 40px;
-  font-family: "Playfair Display", serif;
-  font-weight: 700;
-  letter-spacing: 0.5px;
+  font-size: 48px;
+  font-family: "Barlow Condensed", sans-serif;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  line-height: 1;
+  font-family: "Barlow Condensed", sans-serif;
+
 }
 
 .dbgSubtitle{
   margin: 0 0 18px 0;
   color: var(--muted);
-  font-size: 16px;
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1.1;
 }
 
 .dbgSub{
   margin: 0;
-  opacity: 0.88;
-  font-size: 18px;
+  opacity: 0.9;
+  font-size: 22px;
   font-weight: 500;
-  color: rgba(255,255,255,0.88);
+  color: rgba(255,255,255,0.9);
+  line-height: 1.1;
+  font-family: "Barlow Condensed", sans-serif;
+
 }
 
 .dbgGrid2{
@@ -209,18 +221,15 @@ body{
 }
 
 .dbgBtn{
-  font-size: 17px;
-  font-weight: 600;
-  letter-spacing: 0.4px;
-  padding: 16px 18px;
+  font-size: 22px;
+  font-weight: 700;
+  padding: 16px;
   border-radius: 14px;
   border: 1px solid rgba(255,255,255,0.16);
-  background: rgba(25, 25, 25, 0.58);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  color: var(--text);
+  background: rgba(25,25,25,0.6);
+  color: white;
   cursor: pointer;
-  transition: transform 120ms ease, border-color 120ms ease, background 120ms ease, opacity 120ms ease;
+  font-family: "Barlow Condensed", sans-serif;
 }
 
 .dbgBtn:hover{
@@ -244,15 +253,13 @@ body{
 /* Inputs */
 .dbgInput{
   width: 100%;
-  font-size: 18px;
-  padding: 12px 14px;
+  font-size: 24px;
+  padding: 12px;
   border-radius: var(--radiusSm);
-  border: 1px solid rgba(255,255,255,0.22);
-  outline: none;
   background: rgba(255,255,255,0.12);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  color: var(--text);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: white;
+  font-family: "Barlow Condensed", sans-serif;
 }
 
 .dbgInput::placeholder{
@@ -282,9 +289,10 @@ body{
   display: flex;
   flex-direction: column;
   gap: 8px;
-  font-size: 14px;
+  font-size: 18px;
   color: rgba(255,255,255,0.92);
-  font-weight: 500;
+  font-weight: 600;
+  font-family: "Barlow Condensed", sans-serif;
 }
 
 /* Print badge screen */
@@ -319,17 +327,18 @@ body{
 }
 
 .dbgBadgeType{
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 800;
   letter-spacing: 2px;
   text-transform: uppercase;
+  font-family: "Barlow Condensed", sans-serif;
 }
 
 .dbgBadgeName{
-  font-size: 30px;
-  font-family: "Playfair Display", serif;
-  font-weight: 700;
-  letter-spacing: 1px;
+  font-size: 34px;
+font-family: "Barlow Condensed", sans-serif;
+  font-weight: 800;
+  letter-spacing: 0.8px;
 }
 
 .dbgBadgeMeta{
@@ -591,7 +600,7 @@ body{
   background: linear-gradient(180deg, rgba(183,155,83,0.18), rgba(183,155,83,0.06));
 }
 
-.dbgTableWrap{
+.dbgTableWrap{	
   overflow: auto;
   border: 1px solid var(--stroke);
   border-radius: 14px;
@@ -602,6 +611,7 @@ body{
   width: 100%;
   border-collapse: collapse;
   font-size: 14px;
+  font-family: "Barlow Condensed", sans-serif;
 }
 
 .dbgTh{
@@ -612,11 +622,13 @@ body{
   position: sticky;
   top: 0;
   z-index: 1;
+  font-family: "Barlow Condensed", sans-serif;
 }
 
 .dbgTd{
   padding: 11px 12px;
   border-bottom: 1px solid var(--stroke2);
+  font-family: "Barlow Condensed", sans-serif;
 }
 
 .dbgTr{
@@ -747,3 +759,5 @@ html, body {
 body {
   overflow-y: auto;
 }
+
+

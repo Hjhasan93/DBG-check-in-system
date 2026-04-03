@@ -15,7 +15,7 @@ export default function PrintBadge() {
 
   return (
     <DbgShell
-      title="Detroit Boxing Gym"
+      title="DBG Detroit"
       subtitle="Ready to print. Confirm the badge below, then print."
       footer={
         <div className="dbgGrid3">

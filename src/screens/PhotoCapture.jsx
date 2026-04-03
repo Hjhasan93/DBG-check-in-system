@@ -81,22 +81,24 @@ export default function PhotoCapture() {
 
   return (
     <DbgShell
-      title="Detroit Boxing Gym"
-      subtitle="Take your photo. Stand in the frame, we’ll take it after a short countdown."
+      title="Photo Capture"
+      subtitle="Stand in the frame and take your visitor photo."
     >
       {error ? <div className="dbgErr">{error}</div> : null}
 
       <div className="dbgPhotoLayout">
-        <div className="dbgVideoBox">
-          <video ref={videoRef} autoPlay playsInline muted className="dbgVideo" />
+        <div className="dbgVideoPanel">
+          <div className="dbgVideoBox">
+            <video ref={videoRef} autoPlay playsInline muted className="dbgVideo" />
 
-          {countdown !== null ? (
-            <div className="dbgCountdownOverlay">
-              <div className="dbgCountdownNumber">
-                {countdown === 0 ? "Smile!" : countdown}
+            {countdown !== null ? (
+              <div className="dbgCountdownOverlay">
+                <div className="dbgCountdownNumber">
+                  {countdown === 0 ? "Smile!" : countdown}
+                </div>
               </div>
-            </div>
-          ) : null}
+            ) : null}
+          </div>
         </div>
 
         <div className="dbgSideCard">
@@ -111,7 +113,7 @@ export default function PhotoCapture() {
           </div>
 
           <div className="dbgHint">
-            If the camera is blocked, allow permissions in the browser, then try again.
+            Make sure your face is centered and clearly visible before continuing.
           </div>
 
           <div className="dbgPhotoActions">

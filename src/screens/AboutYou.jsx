@@ -155,7 +155,7 @@ export default function AboutYou() {
     <div className="dbgPage">
       <div className="dbgCard">
         <div className="dbgHeader">
-          <h1 className="dbgTitle">About you</h1>
+          <h1 className="dbgTitle">About You</h1>
         </div>
 
         <p className="dbgSubtitle">Please enter your info.</p>

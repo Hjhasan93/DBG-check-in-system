@@ -99,7 +99,7 @@ export default function ThankYou() {
 
   return (
     <DbgShell
-      title="Detroit Boxing Gym"
+      title="DBG Detroit"
       subtitle="Thank you. Your check-in is complete."
       footer={
         <div className="dbgGrid2">
