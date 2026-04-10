@@ -550,7 +550,7 @@ POST /sobjects/Task
 }
 ```
 
-**Note:** The kiosk integration user needs Task Create permission for this operation. This is not yet configured — let Matt know when you're ready to implement this and we'll add it.
+**Note:** The kiosk integration user has Task Create + Read permission for this operation.
 
 ---
 
