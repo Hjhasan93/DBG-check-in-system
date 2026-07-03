@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { useVisit } from "../context/VisitContext";
 import DbgShell from "../DbgShell";
+import { findOrCreateContact, createCheckIn, uploadPhoto } from "../services/salesforce";
 
 export default function ThankYou() {
   const navigate = useNavigate();
@@ -15,41 +16,33 @@ export default function ThankYou() {
   useEffect(() => {
     async function saveVisit() {
       try {
-        const BACKEND = import.meta.env.VITE_BACKEND_URL;
-        if (!BACKEND) return;
-
-        // ✅ stable id for this one check-in (used for backend dedupe if you add it)
-        let clientVisitId = sessionStorage.getItem("dbg_client_visit_id");
-        if (!clientVisitId) {
-          clientVisitId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-          sessionStorage.setItem("dbg_client_visit_id", clientVisitId);
-        }
-
-        const payload = {
-          clientVisitId, // ✅ add this
+        // 1. Find an existing visitor Contact (or create one)
+        const contactId = await findOrCreateContact({
           firstName: visit.firstName,
           lastName: visit.lastName,
           phone: visit.phone,
           email: visit.email,
-          reasonKey: visit.reasonKey,
-          reasonLabel: visit.reasonLabel,
-          badgeType: visit.badgeType,
-          host: visit.host,
-          tourStudentId: visit.tourStudentId,
-          tourStudentName: visit.tourStudentName,
-          waiverAccepted: visit.waiverAccepted,
-          waiverSignedName: visit.waiverSignedName,
-          waiverSignedAt: visit.waiverSignedAt,
-          photoDataUrl: visit.photoDataUrl,
-        };
-
-        await fetch(`${BACKEND}/visits`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
         });
-      } catch {
-        // keep silent for kiosk mode
+
+        // 2. Create the check-in Event
+        const eventId = await createCheckIn(visit, contactId);
+        setVisit((v) => ({ ...v, contactId, eventId }));
+
+        // 3. Best-effort photo upload — never fail the check-in over a photo
+        if (visit.photoDataUrl) {
+          try {
+            await uploadPhoto(
+              contactId,
+              visit.photoDataUrl,
+              `${visit.firstName} ${visit.lastName}`.trim()
+            );
+          } catch (e) {
+            console.error("Photo upload failed (check-in still saved):", e);
+          }
+        }
+      } catch (e) {
+        // keep silent for kiosk mode, but surface for debugging
+        console.error("Check-in save failed:", e);
       }
     }
 
@@ -59,6 +52,7 @@ export default function ThankYou() {
       savedRef.current = true;
       saveVisit();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visit.firstName, visit.lastName]); // ✅ don’t depend on whole visit object
 
   useEffect(() => {
@@ -81,12 +75,15 @@ export default function ThankYou() {
         reasonLabel: "",
         badgeType: "",
         host: "",
+        hostId: "",
         photoDataUrl: "",
         waiverAccepted: false,
         waiverSignedName: "",
         waiverSignedAt: "",
         tourStudentId: "",
         tourStudentName: "",
+        contactId: "",
+        eventId: "",
       });
       navigate("/");
     }, 5000);

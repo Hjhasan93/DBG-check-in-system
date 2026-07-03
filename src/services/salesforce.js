@@ -229,7 +229,7 @@ export async function createCheckIn(visit, contactId) {
   };
 
   // Conditional fields — only include what applies.
-  if (visit.host) body.Host__c = visit.host; // User Id from the host picker
+  if (visit.hostId) body.Host__c = visit.hostId; // User Id from the host picker
   if (visit.tourStudentId) body.Tour_Student__c = visit.tourStudentId;
   if (visit.waiverAccepted) {
     body.Waiver_Accepted__c = true;
@@ -330,6 +330,18 @@ export async function listVisits(limit = 200) {
             Tour_Student__c, Tour_Student__r.FirstName, Tour_Student__r.LastName
      FROM Event
      WHERE RecordType.DeveloperName = 'Visitor_Check_In'
+     ORDER BY CreatedDate DESC
+     LIMIT ${Number(limit) || 200}`
+  );
+}
+
+// Admin: list watchlist-hit Tasks (the silent staff log created on a match).
+export async function listWatchlistHits(limit = 200) {
+  return query(
+    `SELECT Id, Subject, Description, CreatedDate,
+            Who.FirstName, Who.LastName
+     FROM Task
+     WHERE Subject LIKE 'Watchlist Hit:%'
      ORDER BY CreatedDate DESC
      LIMIT ${Number(limit) || 200}`
   );

@@ -11,13 +11,16 @@ export function VisitProvider({ children }) {
   reasonKey: "",
   reasonLabel: "",
   badgeType: "",
-  host: "",
+  host: "",        // host display name (for the badge/summary)
+  hostId: "",      // host Salesforce User Id (written to Event.Host__c)
   photoDataUrl: "",
   waiverAccepted: false,
   waiverSignedName: "",
   waiverSignedAt: "",
   tourStudentId: "",
   tourStudentName: "",
+  contactId: "",   // visitor Salesforce Contact Id (set during check-in)
+  eventId: "",     // created check-in Event Id
 });
 
 

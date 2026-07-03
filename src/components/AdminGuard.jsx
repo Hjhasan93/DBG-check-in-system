@@ -5,8 +5,6 @@ export default function AdminGuard({ children }) {
   const nav = useNavigate();
   const loc = useLocation();
 
-  const BACKEND = import.meta.env.VITE_BACKEND_URL;
-
   const [pin, setPin] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
@@ -26,11 +24,6 @@ export default function AdminGuard({ children }) {
     try {
       setErr("");
 
-      if (!BACKEND) {
-        setErr("Backend URL missing. Set VITE_BACKEND_URL in .env and restart.");
-        return;
-      }
-
       if (!pin.trim()) {
         setErr("Enter PIN");
         return;
@@ -38,7 +31,7 @@ export default function AdminGuard({ children }) {
 
       setBusy(true);
 
-      const res = await fetch(`${BACKEND}/admin/login`, {
+      const res = await fetch(`/api/admin/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pin }),
@@ -60,7 +53,7 @@ export default function AdminGuard({ children }) {
       nav("/admin");
     } catch (e2) {
       console.log(e2);
-      setErr("Could not reach backend. Is it running on 5050?");
+      setErr("Could not reach the login service.");
     } finally {
       setBusy(false);
     }
@@ -73,10 +66,6 @@ export default function AdminGuard({ children }) {
       <div style={styles.card}>
         <h1 style={styles.title}>Staff Access</h1>
         <p style={styles.sub}>Enter PIN to open Admin.</p>
-
-        <div style={styles.backendLine}>
-          Backend: {BACKEND || "(missing)"}
-        </div>
 
         <form onSubmit={submit} style={styles.form}>
           <input

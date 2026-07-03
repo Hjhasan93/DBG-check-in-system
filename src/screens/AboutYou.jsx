@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useVisit } from "../context/VisitContext";
-import { WATCHLIST } from "../config/watchlist";
+import { getWatchlist, logWatchlistHit } from "../services/salesforce";
 
 const onlyLetters = (s) => s.replace(/[^a-zA-Z]/g, "");
 const onlyDigits = (s) => s.replace(/\D/g, "");
@@ -18,6 +18,7 @@ export default function AboutYou() {
   const [phone, setPhone] = useState(visit.phone || "");
   const [email, setEmail] = useState(visit.email || "");
   const [error, setError] = useState("");
+  const [watchlist, setWatchlist] = useState([]);
 
   // Email is optional, but if entered it must be valid
   const emailOk = useMemo(() => {
@@ -37,41 +38,13 @@ export default function AboutYou() {
     return () => clearTimeout(t);
   }, [navigate]);
 
-  function resetVisitAndGoHome() {
-    setVisit({
-      firstName: "",
-      lastName: "",
-      phone: "",
-      email: "",
-      reasonKey: "",
-      reasonLabel: "",
-      badgeType: "",
-      host: "",
-      photoDataUrl: "",
-      waiverAccepted: false,
-      waiverSignedName: "",
-      waiverSignedAt: "",
-      tourStudentId: "",
-      tourStudentName: "",
-    });
-
-    navigate("/", { replace: true });
-  }
-
-  async function notifyWatchlistHit(payload) {
-    try {
-      const BACKEND = import.meta.env.VITE_BACKEND_URL;
-      if (!BACKEND) return;
-
-      await fetch(`${BACKEND}/watchlist-hit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-    } catch {
-      // silent for kiosk
-    }
-  }
+  // Load the watchlist once from Salesforce. Fail open — a load error must never
+  // block a normal visitor from checking in.
+  useEffect(() => {
+    getWatchlist()
+      .then(setWatchlist)
+      .catch((e) => console.error("Watchlist load failed:", e));
+  }, []);
 
   async function onNext() {
     setError("");
@@ -102,9 +75,9 @@ export default function AboutYou() {
     const phoneDigits = cleanPhone(phoneNum);
     const emailLower = cleanEmail(emailVal);
 
-    // Find hit + how it matched
+    // Find a watchlist hit + how it matched
     let matchedBy = "";
-    const hit = WATCHLIST.find((w) => {
+    const hit = watchlist.find((w) => {
       const wFirst = (w.firstName || "").trim().toLowerCase();
       const wLast = (w.lastName || "").trim().toLowerCase();
       const wPhone = cleanPhone(w.phone || "");
@@ -124,18 +97,20 @@ export default function AboutYou() {
     });
 
     if (hit) {
-      // notify admin (backend) then silently reset and go home
-      notifyWatchlistHit({
-        createdAt: new Date().toISOString(),
+      // Log the hit silently for staff (linked to the watchlisted Contact), keep
+      // the entered name so the neutral screen can show who is waiting, then route
+      // to the neutral "please wait" screen. Never reveal the watchlist reason to
+      // the visitor.
+      logWatchlistHit({
+        contactId: hit.id,
         firstName,
         lastName,
-        phone: phoneDigits,
-        email: emailLower,
-        note: hit.note || "",
         matchedBy,
-      });
+        note: hit.note || "",
+      }).catch((e) => console.error("Watchlist hit log failed:", e));
 
-      resetVisitAndGoHome();
+      setVisit((v) => ({ ...v, firstName, lastName, phone: phoneDigits, email: emailVal }));
+      navigate("/watchlist", { replace: true });
       return;
     }
 

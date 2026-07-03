@@ -1,9 +1,21 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useVisit } from "../context/VisitContext";
 
+// Neutral "please wait" screen shown when a visitor matches the watchlist.
+// It must NOT reveal the watchlist or its reason — the hit is logged silently
+// for staff elsewhere. Auto-returns to the start after a short delay.
 export default function WatchlistResult() {
   const navigate = useNavigate();
-  const { visit } = useVisit();
+  const { visit, setVisit } = useVisit();
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setVisit((v) => ({ ...v, firstName: "", lastName: "", phone: "", email: "" }));
+      navigate("/", { replace: true });
+    }, 20000);
+    return () => clearTimeout(t);
+  }, [navigate, setVisit]);
 
   return (
     <div style={styles.page}>
@@ -13,10 +25,13 @@ export default function WatchlistResult() {
           A team member will assist you at the front desk.
         </p>
 
-        <div style={styles.box}>
-          <div><b>Visitor:</b> {visit.firstName} {visit.lastName}</div>
-          <div style={{ marginTop: 8 }}><b>Status:</b> Requires staff review</div>
-        </div>
+        {visit.firstName || visit.lastName ? (
+          <div style={styles.box}>
+            <div>
+              <b>Visitor:</b> {visit.firstName} {visit.lastName}
+            </div>
+          </div>
+        ) : null}
 
         <button style={styles.secondary} onClick={() => navigate("/")}>
           Back to start

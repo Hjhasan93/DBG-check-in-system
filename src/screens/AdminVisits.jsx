@@ -1,13 +1,61 @@
 import { useEffect, useMemo, useState } from "react";
-import { adminFetch } from "../utils/adminFetch";
+import { listVisits, listWatchlistHits } from "../services/salesforce";
 import DbgShell from "../DbgShell";
 
-export default function AdminVisits() {
-  const BACKEND = import.meta.env.VITE_BACKEND_URL;
+// The watchlist-hit Task stores its details in a single Description string,
+// formatted "…\nMatched by: X\nNote: Y" by logWatchlistHit(). Pull the two
+// staff-facing fields back out so the existing columns/search still work.
+function parseWatchlistDescription(desc) {
+  const d = desc || "";
+  const matchedBy = (d.match(/Matched by:\s*(.*)/i)?.[1] || "").trim();
+  const note = (d.match(/Note:\s*(.*)/i)?.[1] || "").trim();
+  return { matchedBy, note };
+}
 
+// Raw Salesforce Event -> the flat visit shape the table/filter/CSV expect.
+function mapVisit(r) {
+  return {
+    id: r.Id,
+    createdAt: r.CreatedDate,
+    firstName: r.Who?.FirstName || "",
+    lastName: r.Who?.LastName || "",
+    reasonLabel: r.Visit_Reason__c || "",
+    badgeType: r.Badge_Type__c || "",
+    host: r.Host__r?.Name || "",
+    tourStudentName: `${r.Tour_Student__r?.FirstName || ""} ${
+      r.Tour_Student__r?.LastName || ""
+    }`.trim(),
+    waiverAccepted: !!r.Waiver_Accepted__c,
+  };
+}
+
+// Raw Salesforce Task -> the flat watchlist-hit shape. Phone/Email aren't part
+// of the hit Task query, so they stay blank (columns preserved as-is).
+function mapHit(r) {
+  const { matchedBy, note } = parseWatchlistDescription(r.Description);
+  return {
+    id: r.Id,
+    createdAt: r.CreatedDate,
+    firstName: r.Who?.FirstName || "",
+    lastName: r.Who?.LastName || "",
+    phone: "",
+    email: "",
+    matchedBy,
+    note,
+  };
+}
+
+// Quote a CSV field only when it contains a comma, quote, or newline.
+function csvEscape(v) {
+  const s = String(v == null ? "" : v);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+export default function AdminVisits() {
   const [rows, setRows] = useState([]);
   const [q, setQ] = useState("");
   const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(true);
 
   const [viewMode, setViewMode] = useState("visits"); // "visits" | "watchlist"
 
@@ -22,38 +70,43 @@ export default function AdminVisits() {
   }
 
   useEffect(() => {
+    let cancelled = false;
+
     async function load() {
       try {
         setErr("");
+        setLoading(true);
 
-        if (!BACKEND) {
-          setErr("Backend URL missing. Set VITE_BACKEND_URL in .env and restart.");
-          setRows([]);
-          return;
-        }
+        const data =
+          viewMode === "watchlist"
+            ? await listWatchlistHits()
+            : await listVisits();
 
-        const endpoint =
-          viewMode === "watchlist" ? `${BACKEND}/watchlist-hit` : `${BACKEND}/visits`;
+        if (cancelled) return;
 
-        const res = await adminFetch(endpoint);
-
-        if (!res.ok) {
-          setErr(`Backend error: ${res.status}`);
-          setRows([]);
-          return;
-        }
-
-        const data = await res.json();
-        setRows(Array.isArray(data) ? data : []);
+        const mapped = (Array.isArray(data) ? data : []).map(
+          viewMode === "watchlist" ? mapHit : mapVisit
+        );
+        setRows(mapped);
       } catch (e) {
+        if (cancelled) return;
         console.log(e);
-        setErr("Could not load data. Check backend is running and admin token is valid.");
+        setErr(
+          e?.message
+            ? `Could not load data from Salesforce: ${e.message}`
+            : "Could not load data from Salesforce."
+        );
         setRows([]);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     }
 
     load();
-  }, [BACKEND, viewMode]);
+    return () => {
+      cancelled = true;
+    };
+  }, [viewMode]);
 
   function getRangeCutoffMs(rangeKey) {
     const now = Date.now();
@@ -116,12 +169,52 @@ export default function AdminVisits() {
     });
   }, [q, rows, range, startDate, endDate, viewMode]);
 
-  const csvDisabled = !BACKEND || viewMode !== "visits";
+  const csvDisabled = filtered.length === 0;
+
+  function downloadCsv() {
+    if (filtered.length === 0) return;
+
+    const isVisits = viewMode === "visits";
+    const headers = isVisits
+      ? ["Time", "Visitor", "Reason", "Host", "Touring With", "Waiver"]
+      : ["Time", "Name", "Phone", "Email", "Matched By", "Note"];
+
+    const dataRows = filtered.map((r) => {
+      const time = r.createdAt ? new Date(r.createdAt).toLocaleString() : "";
+      const name = `${r.firstName || ""} ${r.lastName || ""}`.trim();
+      return isVisits
+        ? [
+            time,
+            name,
+            r.reasonLabel || "",
+            r.host || "",
+            r.tourStudentName || "",
+            r.waiverAccepted ? "Signed" : "",
+          ]
+        : [time, name, r.phone || "", r.email || "", r.matchedBy || "", r.note || ""];
+    });
+
+    const csv = [headers, ...dataRows]
+      .map((row) => row.map(csvEscape).join(","))
+      .join("\r\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${isVisits ? "visits" : "watchlist-hits"}-${new Date()
+      .toISOString()
+      .slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
 
   return (
     <DbgShell
       title="Admin Visits"
-      subtitle={BACKEND ? `Backend: ${BACKEND}` : "Backend: (missing)"}
+      subtitle="Salesforce"
       footer={
         <div className="dbgAdminFooter">
           <div className="dbgAdminTotal">Total: {filtered.length}</div>
@@ -133,18 +226,9 @@ export default function AdminVisits() {
 
             <button
               className={`dbgBtn dbgBtnPrimary ${csvDisabled ? "dbgBtnDisabled" : ""}`}
-              onClick={() => {
-                const token = sessionStorage.getItem("dbg_admin_token") || "";
-
-                const params = new URLSearchParams();
-                params.set("token", token);
-                params.set("range", range);
-                params.set("q", q.trim());
-
-                window.open(`${BACKEND}/visits.csv?${params.toString()}`, "_blank");
-              }}
+              onClick={downloadCsv}
               disabled={csvDisabled}
-              title={viewMode !== "visits" ? "CSV export is for Visits only" : ""}
+              title={csvDisabled ? "No records to export" : ""}
             >
               Download CSV
             </button>
@@ -278,43 +362,53 @@ export default function AdminVisits() {
           </thead>
 
           <tbody>
-            {filtered.map((r) =>
-              viewMode === "visits" ? (
-                <tr
-                  key={r.id}
-                  onClick={() => window.location.assign(`/admin/${r.id}`)}
-                  className="dbgTr"
-                >
-                  <td className="dbgTd">
-                    {r.createdAt ? new Date(r.createdAt).toLocaleString() : ""}
-                  </td>
-                  <td className="dbgTd">{`${r.firstName || ""} ${r.lastName || ""}`}</td>
-                  <td className="dbgTd">{r.reasonLabel || ""}</td>
-                  <td className="dbgTd">{r.host || ""}</td>
-                  <td className="dbgTd">{r.tourStudentName || ""}</td>
-                  <td className="dbgTd">{r.waiverAccepted ? "Signed" : ""}</td>
-                </tr>
-              ) : (
-                <tr key={r.id} className="dbgTr">
-                  <td className="dbgTd">
-                    {r.createdAt ? new Date(r.createdAt).toLocaleString() : ""}
-                  </td>
-                  <td className="dbgTd">{`${r.firstName || ""} ${r.lastName || ""}`}</td>
-                  <td className="dbgTd">{r.phone || ""}</td>
-                  <td className="dbgTd">{r.email || ""}</td>
-                  <td className="dbgTd">{r.matchedBy || ""}</td>
-                  <td className="dbgTd">{r.note || ""}</td>
-                </tr>
-              )
-            )}
-
-            {filtered.length === 0 ? (
+            {loading ? (
               <tr>
                 <td className="dbgTd" colSpan={6}>
-                  No results
+                  <div className="dbgAdminLoading">Loading…</div>
                 </td>
               </tr>
-            ) : null}
+            ) : (
+              <>
+                {filtered.map((r) =>
+                  viewMode === "visits" ? (
+                    <tr
+                      key={r.id}
+                      onClick={() => window.location.assign(`/admin/${r.id}`)}
+                      className="dbgTr"
+                    >
+                      <td className="dbgTd">
+                        {r.createdAt ? new Date(r.createdAt).toLocaleString() : ""}
+                      </td>
+                      <td className="dbgTd">{`${r.firstName || ""} ${r.lastName || ""}`}</td>
+                      <td className="dbgTd">{r.reasonLabel || ""}</td>
+                      <td className="dbgTd">{r.host || ""}</td>
+                      <td className="dbgTd">{r.tourStudentName || ""}</td>
+                      <td className="dbgTd">{r.waiverAccepted ? "Signed" : ""}</td>
+                    </tr>
+                  ) : (
+                    <tr key={r.id} className="dbgTr">
+                      <td className="dbgTd">
+                        {r.createdAt ? new Date(r.createdAt).toLocaleString() : ""}
+                      </td>
+                      <td className="dbgTd">{`${r.firstName || ""} ${r.lastName || ""}`}</td>
+                      <td className="dbgTd">{r.phone || ""}</td>
+                      <td className="dbgTd">{r.email || ""}</td>
+                      <td className="dbgTd">{r.matchedBy || ""}</td>
+                      <td className="dbgTd">{r.note || ""}</td>
+                    </tr>
+                  )
+                )}
+
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td className="dbgTd" colSpan={6}>
+                      No results
+                    </td>
+                  </tr>
+                ) : null}
+              </>
+            )}
           </tbody>
         </table>
       </div>
