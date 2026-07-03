@@ -22,33 +22,38 @@ API Version:  v64.0
 
 ### Environment Variables
 
-Replace the current `VITE_BACKEND_URL` with:
+**The client secret must never live in the frontend.** Anything in a `VITE_` variable is compiled into the built JavaScript bundle and is visible to anyone who opens DevTools. So the kiosk does **not** hold the Client ID/Secret. Instead it gets a short-lived access token from a tiny **server-side token proxy** (`/api/token` — see Authentication below), which does the OAuth exchange where the secret can stay private.
+
+Replace the current `VITE_BACKEND_URL` with just these two:
 
 ```env
-VITE_SF_LOGIN_URL=https://test.salesforce.com
+# Server-side token proxy that returns a Salesforce access token (holds the secret)
+VITE_SF_TOKEN_URL=/api/token
+# Salesforce REST base URL for this org (staging)
 VITE_SF_INSTANCE_URL=https://dbgdetroit--staging.sandbox.my.salesforce.com
-VITE_SF_CLIENT_ID=<from External Client App — ask Matt>
-VITE_SF_CLIENT_SECRET=<from External Client App — ask Matt>
 ```
+
+The `DBG_Kiosk` **Client ID, Client Secret, and login URL live only in the proxy's server-side environment** — never in the app. (Matt will provide the secret through the proxy's env, not in the repo or this doc.)
 
 ---
 
-## Authentication: OAuth 2.0 Client Credentials
+## Authentication: token proxy (keeps the secret server-side)
 
-The kiosk authenticates as the `DBG Kiosk` integration user using the client credentials flow. No interactive login is required.
+The kiosk authenticates as the `DBG Kiosk` integration user via OAuth 2.0 **client credentials** — but the app never runs that exchange itself, because it would need the client secret in the browser. Instead:
 
-### Token Request
+1. The kiosk calls the **token proxy** (`POST {VITE_SF_TOKEN_URL}` → `/api/token`).
+2. The proxy (server-side, holding the Client ID/Secret) performs the `client_credentials` exchange against Salesforce and returns just the access token + instance URL.
+3. The kiosk uses that token directly against the Salesforce REST API.
+
+### Token request (kiosk → proxy)
 
 ```
-POST {LOGIN_URL}/services/oauth2/token
-Content-Type: application/x-www-form-urlencoded
-
-grant_type=client_credentials
-&client_id={CLIENT_ID}
-&client_secret={CLIENT_SECRET}
+POST /api/token
 ```
 
-### Token Response
+No credentials are sent from the browser — the proxy already holds them.
+
+### Token response (proxy → kiosk)
 
 ```json
 {
@@ -58,42 +63,35 @@ grant_type=client_credentials
 }
 ```
 
-### Using the Token
+*For reference, what the proxy does server-side is a standard `POST {LOGIN_URL}/services/oauth2/token` with `grant_type=client_credentials&client_id=...&client_secret=...`. For a client-credentials flow on a sandbox, `{LOGIN_URL}` is the org's My Domain URL (`https://dbgdetroit--staging.sandbox.my.salesforce.com`), not `test.salesforce.com`.*
 
-Every REST API call includes the token as a header:
+### Using the token
+
+Every Salesforce REST call includes the token as a header:
 
 ```
 Authorization: Bearer {access_token}
 ```
 
-### Token Lifecycle
+### Token lifecycle
 
-- Tokens are valid for ~2 hours (session timeout setting in the org).
-- Cache the token and reuse it. When a call returns `401`, request a new token and retry.
-- **Security note:** The client secret should not be exposed in browser-side JavaScript in production. For the kiosk on a controlled network this is acceptable during development. For a hosted deployment, use a thin serverless proxy (Vercel/Netlify function) that exchanges credentials server-side and returns just the access token.
+- Tokens are valid for ~2 hours (org session-timeout setting).
+- Cache the token and reuse it. When a Salesforce call returns `401`, call `/api/token` again for a fresh token and retry.
+- The client secret stays in the proxy's server environment and is never shipped to the browser.
 
 ### Example: `src/services/salesforce.js` skeleton
 
 ```js
-const LOGIN_URL = import.meta.env.VITE_SF_LOGIN_URL;
+const TOKEN_URL = import.meta.env.VITE_SF_TOKEN_URL;     // "/api/token" (server-side proxy)
 const INSTANCE_URL = import.meta.env.VITE_SF_INSTANCE_URL;
-const CLIENT_ID = import.meta.env.VITE_SF_CLIENT_ID;
-const CLIENT_SECRET = import.meta.env.VITE_SF_CLIENT_SECRET;
 
 const API = `${INSTANCE_URL}/services/data/v64.0`;
 
 let token = null;
 
 async function authenticate() {
-  const res = await fetch(`${LOGIN_URL}/services/oauth2/token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "client_credentials",
-      client_id: CLIENT_ID,
-      client_secret: CLIENT_SECRET,
-    }),
-  });
+  // Ask the server-side proxy for a token. The client secret never touches the browser.
+  const res = await fetch(TOKEN_URL, { method: "POST" });
 
   if (!res.ok) throw new Error(`Auth failed: ${res.status}`);
   const data = await res.json();
@@ -234,34 +232,50 @@ WHERE Visitor_Watchlist__c = true
 ]
 ```
 
-**Usage:** After the visitor enters their info on the AboutYou screen, compare `firstName`, `lastName`, `phone`, `email` against this list. If matched, route to the Watchlist screen and display `Visitor_Watchlist_Note__c`.
+**Usage:** After the visitor enters their info on the AboutYou screen, compare `firstName`, `lastName`, `phone`, `email` against this list. If matched, route to a **neutral "Please wait for assistance" screen** — **do not reveal to the visitor that they matched a watchlist, and never display `Visitor_Watchlist_Note__c` on the kiosk.** The note is for staff/admin only. Log the hit silently in the background (see Operation 10) so staff are alerted.
 
 ---
 
 ### 4. Search for Existing Visitor (Contact)
 
-Before creating a new Contact, search for an existing one by phone or email.
+Before creating a new Contact, search for an existing one. **Match in this priority order, and never show a picker on the kiosk** — keep the visitor flow fast:
 
-**SOQL (search by phone):**
+1. Exact **email** match
+2. then exact **phone** match (`Phone` or `MobilePhone`)
+3. then exact **first + last name** match
+4. If more than one Contact still matches at a step, take the **most recently updated** one (`ORDER BY LastModifiedDate DESC LIMIT 1`).
 
-```sql
-SELECT Id, FirstName, LastName, Phone, MobilePhone, Email
-FROM Contact
-WHERE Phone = '3135551234'
-   OR MobilePhone = '3135551234'
-LIMIT 5
-```
-
-**SOQL (search by email):**
+**SOQL (by email):**
 
 ```sql
 SELECT Id, FirstName, LastName, Phone, MobilePhone, Email
 FROM Contact
 WHERE Email = 'visitor@example.com'
-LIMIT 5
+ORDER BY LastModifiedDate DESC
+LIMIT 1
 ```
 
-**Usage:** If an existing Contact is found, reuse their `Id` as the Event's `WhoId`. If not found, create a new Contact (see next operation).
+**SOQL (by phone):**
+
+```sql
+SELECT Id, FirstName, LastName, Phone, MobilePhone, Email
+FROM Contact
+WHERE Phone = '3135551234' OR MobilePhone = '3135551234'
+ORDER BY LastModifiedDate DESC
+LIMIT 1
+```
+
+**SOQL (by first + last name):**
+
+```sql
+SELECT Id, FirstName, LastName, Phone, MobilePhone, Email
+FROM Contact
+WHERE FirstName = 'Jane' AND LastName = 'Doe'
+ORDER BY LastModifiedDate DESC
+LIMIT 1
+```
+
+**Usage:** Run the queries in order and stop at the first hit — reuse that Contact's `Id` as the Event's `WhoId`. If none match, create a new Contact (see next operation). Never prompt the visitor to choose between matches.
 
 ---
 
@@ -331,7 +345,7 @@ POST /sobjects/Event
 
 #### Getting the Record Type ID
 
-Query it once on app startup and cache it:
+The `Visitor_Check_In` Event record type Id in **staging** is `012VD000006nzYMYAY`. IDs differ per org, so query it once on app startup and cache it rather than hardcoding (production will have a different Id):
 
 ```sql
 SELECT Id
@@ -550,7 +564,7 @@ POST /sobjects/Task
 }
 ```
 
-**Note:** The kiosk integration user has Task Create + Read permission for this operation.
+**Note:** The watchlist hit is logged as a **Task** (a completed activity) — not an Event — because it's an activity log rather than a scheduled meeting. This is the silent background record that alerts staff while the visitor only sees the neutral "Please wait for assistance" screen (see Operation 3). The kiosk integration user is granted `EditTask` plus FLS on `WhoId`, `Description`, and `ActivityDate` for this.
 
 ---
 
@@ -607,10 +621,10 @@ These parts of the app don't change:
 
 ## Quick Start
 
-1. Get the Client ID and Client Secret from Matt
-2. Copy `.env` and add the Salesforce variables
+1. Stand up the **token proxy** first (`/api/token`) — the Client ID/Secret go in its server-side environment, not in the app. (Matt will provide the secret for the proxy env.)
+2. Set the two frontend variables in `.env`: `VITE_SF_TOKEN_URL` and `VITE_SF_INSTANCE_URL` (no secret in the app)
 3. Build `src/services/salesforce.js` using the skeleton above
-4. Test authentication first: call `authenticate()` and confirm you get a token
+4. Test authentication first: call `authenticate()` (hits `/api/token`) and confirm you get a token
 5. Test a read query: call `query("SELECT Id, Name FROM User WHERE IsActive = true LIMIT 5")` and confirm you get results
 6. Start replacing the hardcoded data files one at a time (hosts, students, watchlist)
 7. Build the check-in Event creation last (it depends on the Contact search/create flow)

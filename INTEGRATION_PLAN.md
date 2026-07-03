@@ -2,7 +2,7 @@
 
 ## Overview
 
-Replace the Express/JSON backend with Salesforce as the backend, connected via an External Client App (OAuth 2.0). The React kiosk app will call the Salesforce REST API directly for all data operations.
+Replace the Express/JSON backend with Salesforce as the backend, connected via an External Client App (OAuth 2.0 client-credentials). The React kiosk app calls the Salesforce REST API directly for data operations, getting its access token from a small server-side **token proxy** so the client secret never ships in the browser bundle (see Phase 3).
 
 ## Architecture
 
@@ -52,7 +52,7 @@ Events will use a new Record Type to separate kiosk check-ins from regular calen
 | Kiosk Field | Salesforce Field | Status |
 |---|---|---|
 | visitor | `WhoId` (Lookup to Contact) | Exists |
-| host | `OwnerId` (Lookup to User) | Exists |
+| host | `Host__c` (Lookup to User) | **New field** — a dedicated field, NOT `OwnerId` (see note) |
 | date/time | `StartDateTime` / `EndDateTime` | Exists |
 | visit reason | `Visit_Reason__c` (Picklist) | **New field** |
 | badge type | `Badge_Type__c` (Picklist) | **New field** |
@@ -61,6 +61,8 @@ Events will use a new Record Type to separate kiosk check-ins from regular calen
 | waiver signed at | `Waiver_Signed_At__c` (DateTime) | **New field** |
 | tour student | `Tour_Student__c` (Lookup to Contact) | **New field** |
 | photo | Attached as `ContentVersion` linked via `ContentDocumentLink` | Standard mechanism |
+
+**Why `Host__c` instead of `OwnerId`?** `OwnerId` controls record sharing and puts the check-in on that person's calendar — if the kiosk creates 50 events/day owned by a staff member, their calendar fills up. So the **integration user stays the record owner**, and the selected host goes in a dedicated **`Host__c` (Lookup to User)** field instead.
 
 ### User (Hosts)
 
@@ -88,6 +90,8 @@ Current hardcoded hosts map to these Salesforce Users:
 
 ### 1A-ii. New Integration User: `DBG Kiosk`
 
+> **As built:** the integration user is named **"Kiosk Integration"** (`kiosk@dbgdetroit.org.staging`) and the External Client App is **`DBG_Kiosk`** (client-credentials, scope `api`, run-as this user) — both already exist in staging.
+
 Follow the same pattern used by the existing `DBG Systems` user:
 
 - **Profile**: `Minimum Access - API Only Integrations`
@@ -113,13 +117,16 @@ Follow the same pattern used by the existing `DBG Systems` user:
 | Waiver Signed Name | `Waiver_Signed_Name__c` | Text(120) | — |
 | Waiver Signed At | `Waiver_Signed_At__c` | DateTime | — |
 | Tour Student | `Tour_Student__c` | Lookup(Contact) | — |
+| Host | `Host__c` | Lookup(User) | — |
 
-### 1D. Permission Sets (see 1A-ii above)
+> `Visit_Reason__c` and `Badge_Type__c` are **restricted** picklists — send the exact values from the mapping table in `DEVELOPER_API_REFERENCE.md`, and their values must be assigned to the `Visitor_Check_In` record type (confirmed at the pilot).
 
-Bundled into the `Kiosk_Check_In` permission set group:
+### 1D. Permission Sets — **built & deployed to staging**
 
-- **`Kiosk_Standard_Permissions`**: Contact (Read), Event (Create, Read — Visitor_Check_In RT only), ContentVersion (Create), User (Read)
-- **`Kiosk_Custom_Permissions`**: Field-level access for kiosk-specific custom fields on Event and Contact
+Bundled into the `Kiosk_Check_In` permission set group, assigned to the integration user. The integration user runs on the **Salesforce Integration license**, which has two consequences the permission sets account for:
+
+- **`Kiosk_Standard_Permissions`**: Contact (Read/Create/Edit), ContentVersion (Create), `Visitor_Check_In` record-type visibility, plus the **`ActivitiesAccess` / `EditEvent` / `EditTask` user permissions** for Task/Event access (Activity CRUD can't be granted through object permissions on this license), `ApiEnabled`, and `ViewAllUsers` (for the host query).
+- **`Kiosk_Custom_Permissions`**: field-level security for the kiosk custom fields on Event/Contact **plus** the standard fields the kiosk writes that need FLS — `Contact.Phone/MobilePhone/Email`, `Event.WhoId`, and `Task.WhoId/ActivityDate/Description`.
 
 ---
 
@@ -168,25 +175,21 @@ Replace:
 VITE_BACKEND_URL=http://localhost:5050
 ```
 
-With:
+With just the token-proxy endpoint + REST base. The Client ID/Secret live in the **proxy's server-side environment**, never in the app bundle:
 ```
-VITE_SF_LOGIN_URL=https://login.salesforce.com
+VITE_SF_TOKEN_URL=/api/token
 VITE_SF_INSTANCE_URL=https://dbgdetroit--staging.sandbox.my.salesforce.com
-VITE_SF_CLIENT_ID=<from External Client App>
-VITE_SF_CLIENT_SECRET=<from External Client App>
 ```
 
 ---
 
 ## Phase 3: Security Considerations
 
-### Token Handling
+### Token Handling — the proxy comes BEFORE the React refactor
 
-The OAuth client credentials exchange should happen through a **thin proxy** (e.g., a Vercel/Netlify edge function or small serverless function) rather than directly in the browser. This prevents exposing the client secret in front-end code.
+**Decision (agreed in PR #1):** the OAuth client-credentials exchange happens in a **thin server-side proxy** — a single `POST /api/token` endpoint (Vercel/Netlify function or similar) that exchanges credentials server-side and returns just the access token to the kiosk. The client secret never enters the JS bundle. This proxy must be stood up **before** the Phase 2 React refactor, not after — `VITE_` variables are baked into the build, so a browser-direct exchange would leak the secret in DevTools.
 
-Options:
-1. **Serverless proxy** (recommended) — a single `/api/token` endpoint that exchanges credentials server-side and returns the access token to the kiosk
-2. **Browser-direct** (acceptable for locked-down kiosk on controlled network) — simpler but exposes client secret in JS bundle
+The proxy also **rehomes the admin PIN login** (`POST /api/admin/login`): the current Express backend that validates the PIN is removed in Phase 2, so that check moves onto the proxy.
 
 ### Integration User Scoping
 
@@ -206,8 +209,8 @@ The dedicated `DBG Kiosk` integration user + `Kiosk_Check_In` permission set gro
 ## Open Questions
 
 1. ~~**Who is "Hasan"?**~~ — Resolved: app developer, no SF user. Remove from host list.
-2. **Visitor waiver location** — should waiver acceptance (signed name, timestamp) live on Contact (one-time) or on Event (per visit)? Needs client input.
-3. **Watchlist hit logging** — should this create a separate Event/Task, update a field on Contact, or both?
-4. **Admin panel auth** — should the admin panel continue using a PIN, or switch to Salesforce login (OAuth web flow)?
-5. **Visitor matching** — when a visitor checks in, should the kiosk search for an existing Contact by name/phone/email, or always create a new one?
-6. **Badge printing** — does the badge printing mechanism need any changes, or does it stay browser-based?
+2. ~~**Visitor waiver location**~~ — **Resolved:** on the **Event, per visit** (`Waiver_Accepted__c` / `Waiver_Signed_Name__c` / `Waiver_Signed_At__c`).
+3. ~~**Watchlist hit logging**~~ — **Resolved:** log a **Task** (completed activity) linked to the Contact, and keep the Contact-level watchlist fields. See `DEVELOPER_API_REFERENCE.md` Operation 10.
+4. ~~**Admin panel auth**~~ — **Resolved:** keep the **PIN**; the check moves from the Express backend onto the token proxy (`/api/admin/login`).
+5. ~~**Visitor matching**~~ — **Resolved:** search for an existing Contact first (email → phone → first+last name → most recently updated), **no picker**. See `DEVELOPER_API_REFERENCE.md` Operation 4.
+6. ~~**Badge printing**~~ — **Resolved:** stays **browser-based**, no change.
