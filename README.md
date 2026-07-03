@@ -67,6 +67,21 @@ vercel dev             # serves the SPA and /api/* locally
 Host on Vercel (static Vite build + the `api/` functions deploy together). Set the
 proxy env vars above in the Vercel project settings, then deploy.
 
+## Security notes
+
+- **Set `KIOSK_ORIGIN`** to the kiosk's exact origin in production. The proxy fails
+  closed (no `*`); when unset, only `localhost` is allowed (dev convenience).
+- **`/api/token` mints a Salesforce token without a user login** (the kiosk needs
+  Salesforce access before any admin PIN). CORS only stops cross-origin *browser*
+  callers, so reduce blast radius by: scoping the `DBG_Kiosk` External Client App to
+  the minimum objects/fields the kiosk needs, and restricting the deployment to the
+  kiosk's network (IP allowlist). The most robust option is to have the proxy make the
+  Salesforce calls itself so no token reaches the browser — a worthwhile follow-up if
+  this is ever exposed beyond a controlled kiosk network.
+- Add **per-IP rate limiting** on `/api/admin/login` (e.g. Vercel KV / Upstash) before
+  any non-controlled deployment — serverless functions don't carry the old
+  express-rate-limit.
+
 ## Status / what's left
 
 - ✅ Token proxy, admin-login proxy, and the full Salesforce client are built; every

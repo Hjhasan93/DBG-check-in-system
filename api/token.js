@@ -11,21 +11,35 @@
 //                    e.g. https://dbgdetroit--staging.sandbox.my.salesforce.com
 //   SF_CLIENT_ID     DBG_Kiosk External Client App consumer key
 //   SF_CLIENT_SECRET DBG_Kiosk consumer secret
-//   KIOSK_ORIGIN     allowed browser origin for CORS (e.g. https://<app>.vercel.app);
-//                    defaults to "*" for local dev
+//   KIOSK_ORIGIN     allowed browser origin(s) for CORS, comma-separated
+//                    (e.g. https://<app>.vercel.app). REQUIRED in production — when
+//                    unset, only localhost is allowed (dev only). Never "*".
+//
+// SECURITY: this endpoint mints a Salesforce access token for the kiosk with no user
+// login (the kiosk needs Salesforce access before any admin PIN, so it can't sit
+// behind the admin flow). CORS/Origin checks only stop cross-origin *browser*
+// callers, not a non-browser client that can reach this URL. Reduce the blast radius
+// by (1) scoping the DBG_Kiosk External Client App to the minimum objects/fields the
+// kiosk needs, and (2) restricting the deployment to the kiosk's network (IP
+// allowlist). The fully robust option is to have the proxy make the Salesforce calls
+// itself so no token ever reaches the browser (see INTEGRATION_PLAN.md).
+
+import { applyCors } from "./_cors.js";
 
 const LOGIN_URL = process.env.SF_LOGIN_URL;
 const CLIENT_ID = process.env.SF_CLIENT_ID;
 const CLIENT_SECRET = process.env.SF_CLIENT_SECRET;
-const ALLOWED_ORIGIN = process.env.KIOSK_ORIGIN || "*";
 
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  const allowed = applyCors(req, res);
 
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+
+  // Reject cross-origin browser callers whose Origin isn't allow-listed.
+  if ((req.headers.origin || "") && !allowed) {
+    return res.status(403).json({ error: "Origin not allowed" });
+  }
 
   if (!LOGIN_URL || !CLIENT_ID || !CLIENT_SECRET) {
     return res

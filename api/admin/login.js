@@ -7,7 +7,8 @@
 // Server-side environment variables (Vercel project settings):
 //   ADMIN_PIN_HASH  bcrypt hash of the admin PIN
 //   ADMIN_TOKEN     opaque token returned to the client on a correct PIN
-//   KIOSK_ORIGIN    allowed browser origin for CORS (defaults to "*" for local dev)
+//   KIOSK_ORIGIN    allowed browser origin(s) for CORS, comma-separated. REQUIRED in
+//                   production; when unset, only localhost is allowed (dev only). Never "*".
 //
 // NOTE: serverless functions are stateless, so the old express-rate-limit on PIN
 // attempts isn't carried over. For a kiosk on a controlled network this is
@@ -15,18 +16,21 @@
 // store (e.g. Vercel KV / Upstash) before launch.
 
 import bcrypt from "bcryptjs";
+import { applyCors } from "../_cors.js";
 
 const ADMIN_PIN_HASH = process.env.ADMIN_PIN_HASH || "";
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "";
-const ALLOWED_ORIGIN = process.env.KIOSK_ORIGIN || "*";
 
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  const allowed = applyCors(req, res);
 
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+
+  // Reject cross-origin browser callers whose Origin isn't allow-listed.
+  if ((req.headers.origin || "") && !allowed) {
+    return res.status(403).json({ error: "Origin not allowed" });
+  }
 
   const body = typeof req.body === "string" ? safeParse(req.body) : req.body || {};
   const pin = body.pin;
